@@ -1,0 +1,9 @@
+[package]
+name = "ratatui-arxiv"
+version = "0.1.0"
+authors = ["Alexis Morvan <morvan.alexis@gmail.com>"]
+license = "MIT"
+edition = "2021"
+
+[dependencies]
+ratatui = "0.27.0"
