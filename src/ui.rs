@@ -50,22 +50,22 @@ pub fn render(app: &mut App, frame: &mut Frame) {
     frame.render_stateful_widget(list, layout[0], &mut app.arxiv_entries.state);
 
     // The abstract of the manuscript
+    let summary = if let Some(i) = app.arxiv_entries.state.selected() {
+        app.arxiv_entries.items[i].summary.clone()
+    } else {
+        "Nothin selected...".to_string()
+    };
+
     frame.render_widget(
-        Paragraph::new(format!(
-            "This is a tui template.\n\
-                Press `Esc`, `Ctrl-C` or `q` to stop running.\n\
-                Press left and right to increment and decrement the counter respectively.\n\
-                Counter: {}",
-            app.counter
-        ))
-        .block(
-            Block::bordered()
-                .title("Abstract")
-                .title_alignment(Alignment::Center)
-                .border_type(BorderType::Rounded),
-        )
-        .style(Style::default().fg(Color::Cyan).bg(Color::Black))
-        .centered(),
+        Paragraph::new(format!("{}", summary))
+            .block(
+                Block::bordered()
+                    .title("Abstract")
+                    .title_alignment(Alignment::Center)
+                    .border_type(BorderType::Rounded),
+            )
+            .style(Style::default().fg(Color::Cyan).bg(Color::Black))
+            .centered(),
         layout[1],
     )
 }
