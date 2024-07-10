@@ -1,6 +1,6 @@
 use std::error;
 
-use crate::arxiv_entry::ArxivEntryList;
+use crate::arxiv_entry::{get_from_arxiv, ArxivEntryList};
 
 /// Application result type.
 pub type AppResult<T> = std::result::Result<T, Box<dyn error::Error>>;
@@ -21,12 +21,12 @@ impl Default for App {
         Self {
             running: true,
             counter: 0,
-            arxiv_entries: ArxivEntryList::from_iter([
-                ("A1", "A2", "A3"),
-                ("B1", "B2", "B3"),
-                ("C1", "C2", "C3"),
-                ("D1", "D2", "D3"),
-            ]),
+            arxiv_entries: get_from_arxiv().expect("Because"), // arxiv_entries: ArxivEntryList::from_iter([
+                                                               //     ("A1", "A2", "A3"),
+                                                               //     ("B1", "B2", "B3"),
+                                                               //     ("C1", "C2", "C3"),
+                                                               //     ("D1", "D2", "D3"),
+                                                               // ]),
         }
     }
 }

@@ -1,4 +1,6 @@
+use crate::arxiv_query::{parse_arxiv_entries, query_arxiv};
 use ratatui::widgets::ListState;
+use std::error::Error;
 
 #[derive(Debug, Default)]
 pub struct ArxivEntry {
@@ -36,31 +38,9 @@ impl FromIterator<(&'static str, &'static str, &'static str)> for ArxivEntryList
     }
 }
 
-//
-// pub const ARXIV_ENTRIES: &[ArxivEntry] = &[
-//     ArxivEntry {
-//         title: "Alice <alice@example.com>",
-//         author: "Hello",
-//         summary: "Hi Bob,\nHow are you?\n\nAlice",
-//     },
-//     ArxivEntry {
-//         title: "Bob <bob@example.com>",
-//         author: "Re: Hello",
-//         summary: "Hi Alice,\nI'm fine, thanks!\n\nBob",
-//     },
-//     ArxivEntry {
-//         title: "Charlie <charlie@example.com>",
-//         author: "Re: Hello",
-//         summary: "Hi Alice,\nI'm fine, thanks!\n\nCharlie",
-//     },
-//     ArxivEntry {
-//         title: "Dave <dave@example.com>",
-//         author: "Re: Hello (STOP REPLYING TO ALL)",
-//         summary: "Hi Everyone,\nPlease stop replying to all.\n\nDave",
-//     },
-//     ArxivEntry {
-//         title: "Eve <eve@example.com>",
-//         author: "Re: Hello (STOP REPLYING TO ALL)",
-//         summary: "Hi Everyone,\nI'm reading all your emails.\n\nEve",
-//     },
-// ];
+pub fn get_from_arxiv() -> Result<ArxivEntryList, Box<dyn Error>> {
+    let content = query_arxiv()?;
+    let items = parse_arxiv_entries(&content)?;
+    let state = ListState::default();
+    Ok(ArxivEntryList { items, state })
+}

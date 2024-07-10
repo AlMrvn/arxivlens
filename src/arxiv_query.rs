@@ -1,3 +1,4 @@
+use crate::arxiv_entry::ArxivEntry;
 use minidom::Element;
 use std::error::Error;
 use url::Url;
@@ -23,14 +24,14 @@ fn get_search_query_str() -> Result<String, Box<dyn Error>> {
     Ok(search_url.to_string())
 }
 
-fn query_arxiv() -> Result<String, Box<dyn Error>> {
+pub fn query_arxiv() -> Result<String, Box<dyn Error>> {
     let search_query_str = "http://export.arxiv.org/api/query?search_query=cat%3Aquant-ph&sortBy=lastUpdatedDate&start=0&max_results=20";
     Ok(reqwest::blocking::get(search_query_str)?.text()?)
 }
 
-fn parse_arxiv_entries(content: &str) -> Result<Vec<Entry>, Box<dyn Error>> {
+pub fn parse_arxiv_entries(content: &str) -> Result<Vec<ArxivEntry>, Box<dyn Error>> {
     let root: Element = content.parse().unwrap();
-    let mut articles: Vec<Entry> = Vec::new();
+    let mut articles: Vec<ArxivEntry> = Vec::new();
 
     for child in root.children() {
         if child.is("entry", ENTRY_NS) {
@@ -46,23 +47,14 @@ fn parse_arxiv_entries(content: &str) -> Result<Vec<Entry>, Box<dyn Error>> {
                 names.push(name.clone());
                 println!("{}", name);
             }
-            articles.push(Entry {
+            articles.push(ArxivEntry {
                 title: title,
-                id: id,
-                first_author: names.first().unwrap().to_string(),
-                last_author: names.last().unwrap().to_string(),
+                author: names.first().unwrap().to_string(),
+                summary: "This is a summary".to_string(),
             });
         }
     }
     Ok(articles)
-}
-
-#[derive(Debug)]
-pub struct Entry {
-    title: String,
-    id: String,
-    first_author: String,
-    last_author: String,
 }
 
 // fn main() -> Result<(), Box<dyn Error>> {
