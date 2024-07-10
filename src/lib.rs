@@ -14,3 +14,4 @@ pub mod tui;
 pub mod handler;
 
 pub mod arxiv_entry;
+pub mod arxiv_query;

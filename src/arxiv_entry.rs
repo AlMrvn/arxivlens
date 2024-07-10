@@ -35,6 +35,7 @@ impl FromIterator<(&'static str, &'static str, &'static str)> for ArxivEntryList
         Self { items, state }
     }
 }
+
 //
 // pub const ARXIV_ENTRIES: &[ArxivEntry] = &[
 //     ArxivEntry {

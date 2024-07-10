@@ -17,10 +17,17 @@ pub fn render(app: &mut App, frame: &mut Frame) {
     // - https://docs.rs/ratatui/latest/ratatui/widgets/index.html
     // - https://github.com/ratatui-org/ratatui/tree/master/examples
 
+    // First we create a Layout
     let layout = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
         .split(frame.size());
+
+    let sub_layout = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Length(4), Constraint::Min(10)])
+        .split(layout[1]);
+
     // Create the block:
     let block = Block::bordered()
         .title("arXiv Read")
@@ -50,6 +57,26 @@ pub fn render(app: &mut App, frame: &mut Frame) {
     frame.render_stateful_widget(list, layout[0], &mut app.arxiv_entries.state);
 
     // The abstract of the manuscript
+    let authors = if let Some(i) = app.arxiv_entries.state.selected() {
+        app.arxiv_entries.items[i].author.clone()
+    } else {
+        "Nothin selected...".to_string()
+    };
+
+    frame.render_widget(
+        Paragraph::new(format!("{}", authors))
+            .block(
+                Block::bordered()
+                    .title("Authors")
+                    .title_alignment(Alignment::Center)
+                    .border_type(BorderType::Rounded),
+            )
+            .style(Style::default().fg(Color::Cyan).bg(Color::Black))
+            .centered(),
+        sub_layout[0],
+    );
+
+    // The abstract of the manuscript
     let summary = if let Some(i) = app.arxiv_entries.state.selected() {
         app.arxiv_entries.items[i].summary.clone()
     } else {
@@ -66,6 +93,6 @@ pub fn render(app: &mut App, frame: &mut Frame) {
             )
             .style(Style::default().fg(Color::Cyan).bg(Color::Black))
             .centered(),
-        layout[1],
+        sub_layout[1],
     )
 }
