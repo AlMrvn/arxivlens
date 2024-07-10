@@ -27,6 +27,9 @@ pub fn handle_key_events(key_event: KeyEvent, app: &mut App) -> AppResult<()> {
         KeyCode::Down => {
             app.select_next();
         }
+        KeyCode::Char('y') => {
+            app.yank_id();
+        }
 
         // Other handlers you could add here.
         _ => {}

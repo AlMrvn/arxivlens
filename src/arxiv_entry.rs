@@ -7,14 +7,16 @@ pub struct ArxivEntry {
     pub title: String,
     pub author: String,
     pub summary: String,
+    pub id: String,
 }
 
 impl ArxivEntry {
-    fn new(title: &str, author: &str, summary: &str) -> Self {
+    fn new(title: &str, author: &str, summary: &str, id: &str) -> Self {
         Self {
             title: title.to_string(),
             author: author.to_string(),
             summary: summary.to_string(),
+            id: id.to_string(),
         }
     }
 }
@@ -25,13 +27,15 @@ pub struct ArxivEntryList {
     pub state: ListState,
 }
 
-impl FromIterator<(&'static str, &'static str, &'static str)> for ArxivEntryList {
-    fn from_iter<T: IntoIterator<Item = (&'static str, &'static str, &'static str)>>(
+impl FromIterator<(&'static str, &'static str, &'static str, &'static str)> for ArxivEntryList {
+    fn from_iter<
+        T: IntoIterator<Item = (&'static str, &'static str, &'static str, &'static str)>,
+    >(
         iter: T,
     ) -> Self {
         let items = iter
             .into_iter()
-            .map(|(title, author, summary)| ArxivEntry::new(title, author, summary))
+            .map(|(title, author, summary, id)| ArxivEntry::new(title, author, summary, id))
             .collect();
         let state = ListState::default();
         Self { items, state }

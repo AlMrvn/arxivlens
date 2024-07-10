@@ -92,7 +92,7 @@ pub fn render(app: &mut App, frame: &mut Frame) {
                     .border_type(BorderType::Rounded),
             )
             .style(Style::default().fg(Color::Cyan).bg(Color::Black))
-            .centered(),
+            .left_aligned(),
         sub_layout[1],
     )
 }

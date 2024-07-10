@@ -1,3 +1,4 @@
+use arboard::Clipboard;
 use std::error;
 
 use crate::arxiv_entry::{get_from_arxiv, ArxivEntryList};
@@ -64,6 +65,19 @@ impl App {
 
     pub fn select_last(&mut self) {
         self.arxiv_entries.state.select_last();
+    }
+
+    pub fn yank_id(&mut self) {
+        // The abstract of the manuscript
+        let id = if let Some(i) = self.arxiv_entries.state.selected() {
+            self.arxiv_entries.items[i].id.clone()
+        } else {
+            "Nothin selected".to_string()
+        };
+
+        // Set the clipboard
+        let mut clipboard = Clipboard::new().unwrap();
+        clipboard.set_text(id).unwrap();
     }
 
     pub fn increment_counter(&mut self) {
