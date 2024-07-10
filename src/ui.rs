@@ -47,7 +47,11 @@ pub fn render(app: &mut App, frame: &mut Frame) {
     let list = List::new(items.clone())
         .block(block)
         .style(Style::default().fg(Color::Cyan).bg(Color::Black))
-        .highlight_style(Style::default().add_modifier(Modifier::ITALIC))
+        .highlight_style(
+            Style::default()
+                .fg(Color::White)
+                .add_modifier(Modifier::ITALIC),
+        )
         .highlight_symbol(">>")
         .repeat_highlight_symbol(true)
         .direction(ListDirection::TopToBottom)
@@ -58,7 +62,7 @@ pub fn render(app: &mut App, frame: &mut Frame) {
 
     // The abstract of the manuscript
     let authors = if let Some(i) = app.arxiv_entries.state.selected() {
-        app.arxiv_entries.items[i].author.clone()
+        app.arxiv_entries.items[i].authors.join(", ")
     } else {
         "Nothin selected...".to_string()
     };

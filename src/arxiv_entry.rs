@@ -2,21 +2,21 @@ use crate::arxiv_query::{parse_arxiv_entries, query_arxiv};
 use ratatui::widgets::ListState;
 use std::error::Error;
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, PartialEq)]
 pub struct ArxivEntry {
     pub title: String,
-    pub author: String,
+    pub authors: Vec<String>,
     pub summary: String,
     pub id: String,
 }
 
 impl ArxivEntry {
-    fn new(title: &str, author: &str, summary: &str, id: &str) -> Self {
+    fn new(title: String, authors: Vec<String>, summary: String, id: String) -> Self {
         Self {
-            title: title.to_string(),
-            author: author.to_string(),
-            summary: summary.to_string(),
-            id: id.to_string(),
+            title,
+            authors,
+            summary,
+            id,
         }
     }
 }
@@ -27,15 +27,11 @@ pub struct ArxivEntryList {
     pub state: ListState,
 }
 
-impl FromIterator<(&'static str, &'static str, &'static str, &'static str)> for ArxivEntryList {
-    fn from_iter<
-        T: IntoIterator<Item = (&'static str, &'static str, &'static str, &'static str)>,
-    >(
-        iter: T,
-    ) -> Self {
+impl FromIterator<(String, Vec<String>, String, String)> for ArxivEntryList {
+    fn from_iter<T: IntoIterator<Item = (String, Vec<String>, String, String)>>(iter: T) -> Self {
         let items = iter
             .into_iter()
-            .map(|(title, author, summary, id)| ArxivEntry::new(title, author, summary, id))
+            .map(|(title, authors, summary, id)| ArxivEntry::new(title, authors, summary, id))
             .collect();
         let state = ListState::default();
         Self { items, state }
