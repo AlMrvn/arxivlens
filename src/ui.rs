@@ -2,13 +2,12 @@ use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout},
     style::{Color, Modifier, Style},
     widgets::{
-        self, Block, BorderType, HighlightSpacing, List, ListDirection, ListItem, Paragraph,
+        Block, BorderType, HighlightSpacing, List, ListDirection, ListItem, Paragraph, Wrap,
     },
     Frame,
 };
 
 use crate::app::App;
-use crate::arxiv_entry;
 
 /// Renders the user interface widgets.
 pub fn render(app: &mut App, frame: &mut Frame) {
@@ -20,11 +19,13 @@ pub fn render(app: &mut App, frame: &mut Frame) {
     // First we create a Layout
     let layout = Layout::default()
         .direction(Direction::Horizontal)
+        .horizontal_margin(2)
         .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
         .split(frame.size());
 
     let sub_layout = Layout::default()
         .direction(Direction::Vertical)
+        .horizontal_margin(2)
         .constraints([Constraint::Length(4), Constraint::Min(10)])
         .split(layout[1]);
 
@@ -49,10 +50,11 @@ pub fn render(app: &mut App, frame: &mut Frame) {
         .style(Style::default().fg(Color::Cyan).bg(Color::Black))
         .highlight_style(
             Style::default()
-                .fg(Color::White)
+                .fg(Color::Black)
+                .bg(Color::White)
                 .add_modifier(Modifier::ITALIC),
         )
-        .highlight_symbol(">>")
+        .highlight_symbol("> ")
         .repeat_highlight_symbol(true)
         .direction(ListDirection::TopToBottom)
         .highlight_spacing(HighlightSpacing::Always);
@@ -76,7 +78,8 @@ pub fn render(app: &mut App, frame: &mut Frame) {
                     .border_type(BorderType::Rounded),
             )
             .style(Style::default().fg(Color::Cyan).bg(Color::Black))
-            .centered(),
+            .centered()
+            .wrap(Wrap { trim: true }),
         sub_layout[0],
     );
 
@@ -96,7 +99,8 @@ pub fn render(app: &mut App, frame: &mut Frame) {
                     .border_type(BorderType::Rounded),
             )
             .style(Style::default().fg(Color::Cyan).bg(Color::Black))
-            .left_aligned(),
+            .left_aligned()
+            .wrap(Wrap { trim: true }),
         sub_layout[1],
     )
 }
