@@ -45,16 +45,24 @@ pub fn parse_arxiv_entries(content: &str) -> Result<Vec<ArxivEntry>, Box<dyn Err
             let title = child.get_child("title", ENTRY_NS).unwrap().text();
             let id = child.get_child("id", ENTRY_NS).unwrap().text();
             let summary = child.get_child("summary", ENTRY_NS).unwrap().text();
+            let updated = child.get_child("updated", ENTRY_NS).unwrap().text();
+            let published = child.get_child("published", ENTRY_NS).unwrap().text();
 
             // Extract the authors which have one more depth.
             let authors = extract_authors(child)?;
 
-            articles.push(ArxivEntry {
-                title,
-                authors,
-                summary,
-                id,
-            });
+            // Only add the new entry, ie published == updated
+            match updated.as_str() == published.as_str() {
+                true => articles.push(ArxivEntry {
+                    title,
+                    authors,
+                    summary,
+                    id,
+                    updated,
+                    published,
+                }),
+                _ => (),
+            }
         }
     }
     Ok(articles)
