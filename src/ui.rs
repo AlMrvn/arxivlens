@@ -26,7 +26,7 @@ pub fn render(app: &mut App, frame: &mut Frame) {
     let sub_layout = Layout::default()
         .direction(Direction::Vertical)
         .horizontal_margin(2)
-        .constraints([Constraint::Length(4), Constraint::Min(10)])
+        .constraints([Constraint::Length(6), Constraint::Min(10)])
         .split(layout[1]);
 
     // Create the block:
@@ -66,7 +66,7 @@ pub fn render(app: &mut App, frame: &mut Frame) {
     let authors = if let Some(i) = app.arxiv_entries.state.selected() {
         app.arxiv_entries.items[i].authors.join(", ")
     } else {
-        "Nothin selected...".to_string()
+        "Nothing selected...".to_string()
     };
 
     frame.render_widget(
@@ -78,7 +78,7 @@ pub fn render(app: &mut App, frame: &mut Frame) {
                     .border_type(BorderType::Rounded),
             )
             .style(Style::default().fg(Color::Cyan).bg(Color::Black))
-            .centered()
+            .left_aligned()
             .wrap(Wrap { trim: true }),
         sub_layout[0],
     );
@@ -87,7 +87,7 @@ pub fn render(app: &mut App, frame: &mut Frame) {
     let summary = if let Some(i) = app.arxiv_entries.state.selected() {
         app.arxiv_entries.items[i].summary.clone()
     } else {
-        "Nothin selected...".to_string()
+        "Nothing selected...".to_string()
     };
 
     frame.render_widget(

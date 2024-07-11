@@ -15,17 +15,17 @@ pub fn handle_key_events(key_event: KeyEvent, app: &mut App) -> AppResult<()> {
             }
         }
         // Counter handlers
-        KeyCode::Right => {
-            app.increment_counter();
-        }
-        KeyCode::Left => {
-            app.decrement_counter();
-        }
-        KeyCode::Up => {
+        KeyCode::Up | KeyCode::Char('k') => {
             app.select_previous();
         }
-        KeyCode::Down => {
+        KeyCode::Down | KeyCode::Char('j') => {
             app.select_next();
+        }
+        KeyCode::Char('g') => {
+            app.select_first();
+        }
+        KeyCode::Char('G') => {
+            app.select_last();
         }
         KeyCode::Char('y') => {
             app.yank_id();
