@@ -154,12 +154,16 @@ fn test_parse_arxiv_entries() -> Result<(), Box<dyn Error>> {
                 "This is a summary for the first fake entry used for testing purposes.",
             ),
             id: String::from("http://arxiv.org/abs/9876.54321"),
+            updated: String::from("2023-12-31T23:59:59Z"),
+            published: String::from("2023-12-31T23:59:59Z"),
         },
         ArxivEntry {
             title: String::from("Sample Title 2"),
             authors: [String::from("Author Three")].to_vec(),
             summary: String::from("This is a sample summary for the second entry."),
             id: String::from("http://arxiv.org/abs/1212.34567"),
+            updated: String::from("2024-01-01T00:00:00Z"),
+            published: String::from("2024-01-01T00:00:00Z"),
         },
     ];
 

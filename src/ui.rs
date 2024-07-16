@@ -62,7 +62,7 @@ pub fn render(app: &mut App, frame: &mut Frame) {
     // The selection windows
     frame.render_stateful_widget(list, layout[0], &mut app.arxiv_entries.state);
 
-    // The abstract of the manuscript
+    // Authors of the manuscript:
     let authors = if let Some(i) = app.arxiv_entries.state.selected() {
         app.arxiv_entries.items[i].authors.join(", ")
     } else {
