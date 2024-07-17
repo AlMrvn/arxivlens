@@ -1,10 +1,10 @@
+use ratatui::backend::CrosstermBackend;
+use ratatui::Terminal;
 use ratatui_arxiv::app::{App, AppResult};
 use ratatui_arxiv::event::{Event, EventHandler};
 use ratatui_arxiv::handler::handle_key_events;
 use ratatui_arxiv::tui::Tui;
 use std::io;
-use ratatui::backend::CrosstermBackend;
-use ratatui::Terminal;
 
 fn main() -> AppResult<()> {
     // Create an application.
