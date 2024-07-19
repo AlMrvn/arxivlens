@@ -1,7 +1,9 @@
+use std::str::FromStr;
+
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout},
     style::{Color, Modifier, Style},
-    text::{Line, Span, Text},
+    text::{Line, Span},
     widgets::{
         Block, BorderType, Borders, HighlightSpacing, List, ListDirection, ListItem, Padding,
         Paragraph, Wrap,
@@ -108,7 +110,7 @@ pub fn render(app: &mut App, frame: &mut Frame) {
         .style(Style::default().fg(Color::Cyan).bg(Color::Black))
         .highlight_style(
             Style::default()
-                .fg(Color::Black)
+                .fg(Color::Cyan)
                 .bg(Color::White)
                 .add_modifier(Modifier::ITALIC),
         )
@@ -133,6 +135,9 @@ pub fn render(app: &mut App, frame: &mut Frame) {
             .block(
                 Block::bordered()
                     .title(" Abstract ")
+                    .title_style(
+                        Style::default().fg(Color::from_str("#ff9e64").expect("Will never happen")),
+                    )
                     .border_type(BorderType::Rounded)
                     .padding(Padding::vertical(2)),
             )
@@ -148,6 +153,9 @@ pub fn render(app: &mut App, frame: &mut Frame) {
                 Block::new()
                     .borders(Borders::TOP)
                     .title(" Title ")
+                    .title_style(
+                        Style::default().fg(Color::from_str("#ff9e64").expect("Will never happen")),
+                    )
                     .title_alignment(Alignment::Left)
                     .border_type(BorderType::Plain)
                     .padding(Padding::horizontal(2)),
@@ -165,6 +173,9 @@ pub fn render(app: &mut App, frame: &mut Frame) {
                 Block::new()
                     .borders(Borders::TOP)
                     .title(" Authors ")
+                    .title_style(
+                        Style::default().fg(Color::from_str("#ff9e64").expect("Will never happen")),
+                    )
                     .title_alignment(Alignment::Left)
                     .border_type(BorderType::Double)
                     .padding(Padding::horizontal(2)),
@@ -196,10 +207,14 @@ pub fn render(app: &mut App, frame: &mut Frame) {
                 Block::new()
                     .borders(Borders::TOP)
                     .title(" Abstract ")
+                    .title_style(
+                        Style::default().fg(Color::from_str("#ff9e64").expect("Will never happen")),
+                    )
                     .title_alignment(Alignment::Left)
                     .border_type(BorderType::Plain)
                     .padding(Padding::horizontal(2)),
             )
+            .style(Style::default().fg(Color::Cyan).bg(Color::Black))
             .left_aligned()
             .wrap(Wrap { trim: true }),
         sub_layout[2],
