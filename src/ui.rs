@@ -1,5 +1,3 @@
-use std::str::FromStr;
-
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout},
     style::{Color, Modifier, Style},
@@ -12,6 +10,11 @@ use ratatui::{
 };
 
 use crate::app::App;
+
+// Using the Tokyonight color palette. See https://lospec.com/palette-list/tokyo-night.
+const ORANGE: Color = Color::Rgb(255, 158, 100);
+const TURQUOISE: Color = Color::Rgb(79, 214, 190);
+const TEAL: Color = Color::Rgb(65, 166, 181);
 
 fn split_with_keywords(text: &str, keywords: &[&str]) -> (Vec<String>, Vec<bool>) {
     let mut text_chunks = vec![];
@@ -92,6 +95,7 @@ pub fn render(app: &mut App, frame: &mut Frame) {
     // Create the block:
     let block = Block::bordered()
         .title("arXiv Read")
+        .title_style(Style::default().fg(ORANGE))
         .title_alignment(Alignment::Center)
         .border_type(BorderType::Rounded);
 
@@ -107,10 +111,10 @@ pub fn render(app: &mut App, frame: &mut Frame) {
     // Create a List from all list items and highlight the currently selected one
     let list = List::new(items.clone())
         .block(block)
-        .style(Style::default().fg(Color::Cyan).bg(Color::Black))
+        .style(Style::default().fg(TEAL).bg(Color::Black))
         .highlight_style(
             Style::default()
-                .fg(Color::Cyan)
+                .fg(TEAL)
                 .bg(Color::White)
                 .add_modifier(Modifier::ITALIC),
         )
@@ -135,9 +139,7 @@ pub fn render(app: &mut App, frame: &mut Frame) {
             .block(
                 Block::bordered()
                     .title(" Abstract ")
-                    .title_style(
-                        Style::default().fg(Color::from_str("#ff9e64").expect("Will never happen")),
-                    )
+                    .title_style(Style::default().fg(ORANGE))
                     .border_type(BorderType::Rounded)
                     .padding(Padding::vertical(2)),
             )
@@ -153,14 +155,12 @@ pub fn render(app: &mut App, frame: &mut Frame) {
                 Block::new()
                     .borders(Borders::TOP)
                     .title(" Title ")
-                    .title_style(
-                        Style::default().fg(Color::from_str("#ff9e64").expect("Will never happen")),
-                    )
+                    .title_style(Style::default().fg(ORANGE))
                     .title_alignment(Alignment::Left)
                     .border_type(BorderType::Plain)
                     .padding(Padding::horizontal(2)),
             )
-            .style(Style::default().fg(Color::Cyan).bg(Color::Black))
+            .style(Style::default().fg(TEAL).bg(Color::Black))
             .left_aligned()
             .wrap(Wrap { trim: true }),
         sub_layout[0],
@@ -173,14 +173,12 @@ pub fn render(app: &mut App, frame: &mut Frame) {
                 Block::new()
                     .borders(Borders::TOP)
                     .title(" Authors ")
-                    .title_style(
-                        Style::default().fg(Color::from_str("#ff9e64").expect("Will never happen")),
-                    )
+                    .title_style(Style::default().fg(ORANGE))
                     .title_alignment(Alignment::Left)
                     .border_type(BorderType::Double)
                     .padding(Padding::horizontal(2)),
             )
-            .style(Style::default().fg(Color::Cyan).bg(Color::Black))
+            .style(Style::default().fg(TEAL).bg(Color::Black))
             .left_aligned()
             .wrap(Wrap { trim: true }),
         sub_layout[1],
@@ -195,9 +193,9 @@ pub fn render(app: &mut App, frame: &mut Frame) {
     );
     for (chunk, is_key) in splitted_summary.iter().zip(is_keyword.iter()) {
         if *is_key {
-            spans.push(Span::raw(chunk).style(Style::default().fg(Color::Black).bg(Color::White)));
+            spans.push(Span::raw(chunk).style(Style::default().fg(Color::Black).bg(TURQUOISE)));
         } else {
-            spans.push(Span::raw(chunk).style(Style::default().fg(Color::Cyan).bg(Color::Black)));
+            spans.push(Span::raw(chunk).style(Style::default().fg(TEAL).bg(Color::Black)));
         }
     }
 
@@ -207,14 +205,12 @@ pub fn render(app: &mut App, frame: &mut Frame) {
                 Block::new()
                     .borders(Borders::TOP)
                     .title(" Abstract ")
-                    .title_style(
-                        Style::default().fg(Color::from_str("#ff9e64").expect("Will never happen")),
-                    )
+                    .title_style(Style::default().fg(ORANGE))
                     .title_alignment(Alignment::Left)
                     .border_type(BorderType::Plain)
                     .padding(Padding::horizontal(2)),
             )
-            .style(Style::default().fg(Color::Cyan).bg(Color::Black))
+            .style(Style::default().fg(TEAL).bg(Color::Black))
             .left_aligned()
             .wrap(Wrap { trim: true }),
         sub_layout[2],
