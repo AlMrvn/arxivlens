@@ -3,7 +3,8 @@ use ratatui::{
     style::{Color, Modifier, Style},
     text::{Line, Span, Text},
     widgets::{
-        Block, BorderType, HighlightSpacing, List, ListDirection, ListItem, Paragraph, Wrap,
+        Block, BorderType, Borders, HighlightSpacing, List, ListDirection, ListItem, Padding,
+        Paragraph, Wrap,
     },
     Frame,
 };
@@ -79,7 +80,11 @@ pub fn render(app: &mut App, frame: &mut Frame) {
     let sub_layout = Layout::default()
         .direction(Direction::Vertical)
         .horizontal_margin(2)
-        .constraints([Constraint::Length(6), Constraint::Min(10)])
+        .constraints([
+            Constraint::Length(4), // Title
+            Constraint::Length(6), // Authors
+            Constraint::Min(10),   // Abstract/summery
+        ])
         .split(layout[1]);
 
     // Create the block:
@@ -116,19 +121,36 @@ pub fn render(app: &mut App, frame: &mut Frame) {
     frame.render_stateful_widget(list, layout[0], &mut app.arxiv_entries.state);
 
     // Authors of the manuscript:
-    let authors = if let Some(i) = app.arxiv_entries.state.selected() {
-        app.arxiv_entries.items[i].authors.join(", ")
+    let current_entry = if let Some(i) = app.arxiv_entries.state.selected() {
+        &app.arxiv_entries.items[i]
     } else {
-        "Nothing selected...".to_string()
+        // Should implement a default print here ?
+        &app.arxiv_entries.items[0]
     };
 
     frame.render_widget(
-        Paragraph::new(format!("{}", authors))
+        Paragraph::new("")
             .block(
                 Block::bordered()
-                    .title("Authors")
-                    .title_alignment(Alignment::Center)
-                    .border_type(BorderType::Rounded),
+                    .title(" Abstract ")
+                    .border_type(BorderType::Rounded)
+                    .padding(Padding::vertical(2)),
+            )
+            .left_aligned()
+            .wrap(Wrap { trim: true }),
+        layout[1],
+    );
+
+    // Title
+    frame.render_widget(
+        Paragraph::new(Line::raw(current_entry.title.clone()))
+            .block(
+                Block::new()
+                    .borders(Borders::TOP)
+                    .title(" Title ")
+                    .title_alignment(Alignment::Left)
+                    .border_type(BorderType::Plain)
+                    .padding(Padding::horizontal(2)),
             )
             .style(Style::default().fg(Color::Cyan).bg(Color::Black))
             .left_aligned()
@@ -136,16 +158,30 @@ pub fn render(app: &mut App, frame: &mut Frame) {
         sub_layout[0],
     );
 
-    // The abstract of the manuscript
-    let summary = if let Some(i) = app.arxiv_entries.state.selected() {
-        app.arxiv_entries.items[i].summary.clone()
-    } else {
-        "Nothing selected...".to_string()
-    };
+    // Authors
+    frame.render_widget(
+        Paragraph::new(format!("{}", current_entry.authors.join(", ")))
+            .block(
+                Block::new()
+                    .borders(Borders::TOP)
+                    .title(" Authors ")
+                    .title_alignment(Alignment::Left)
+                    .border_type(BorderType::Double)
+                    .padding(Padding::horizontal(2)),
+            )
+            .style(Style::default().fg(Color::Cyan).bg(Color::Black))
+            .left_aligned()
+            .wrap(Wrap { trim: true }),
+        sub_layout[1],
+    );
 
+    // The abstract of the manuscript.
+    // Implementation of the hilight of keywords:
     let mut spans: Vec<Span> = Vec::new();
-    let (splitted_summary, is_keyword) =
-        split_with_keywords(&summary, &["error", "correction", "Correction"]);
+    let (splitted_summary, is_keyword) = split_with_keywords(
+        &current_entry.summary,
+        &["error", "correction", "Correction"],
+    );
     for (chunk, is_key) in splitted_summary.iter().zip(is_keyword.iter()) {
         if *is_key {
             spans.push(Span::raw(chunk).style(Style::default().fg(Color::Black).bg(Color::White)));
@@ -153,19 +189,19 @@ pub fn render(app: &mut App, frame: &mut Frame) {
             spans.push(Span::raw(chunk).style(Style::default().fg(Color::Cyan).bg(Color::Black)));
         }
     }
-    let text = Text::from(Line::from(spans));
 
     frame.render_widget(
-        Paragraph::new(text)
+        Paragraph::new(Line::from(spans))
             .block(
-                Block::bordered()
-                    .title("Abstract")
-                    .title_alignment(Alignment::Center)
-                    .border_type(BorderType::Rounded),
+                Block::new()
+                    .borders(Borders::TOP)
+                    .title(" Abstract ")
+                    .title_alignment(Alignment::Left)
+                    .border_type(BorderType::Plain)
+                    .padding(Padding::horizontal(2)),
             )
-            .style(Style::default().fg(Color::Cyan).bg(Color::Black))
             .left_aligned()
             .wrap(Wrap { trim: true }),
-        sub_layout[1],
+        sub_layout[2],
     )
 }
