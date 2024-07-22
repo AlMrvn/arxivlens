@@ -1,5 +1,5 @@
 [package]
-name = "ratatui-arxiv"
+name = "arxivlens"
 version = "0.1.0"
 authors = ["Alexis Morvan <morvan.alexis@gmail.com>"]
 license = "MIT"
@@ -10,4 +10,3 @@ arboard = "3.4.0"
 minidom = "0.15.2"
 ratatui = "0.27.0"
 reqwest = { version = "0.12.5", features = ["blocking"] }
-url = "2.5.2"

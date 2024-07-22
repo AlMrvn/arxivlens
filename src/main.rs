@@ -1,9 +1,9 @@
+use arxivlens::app::{App, AppResult};
+use arxivlens::event::{Event, EventHandler};
+use arxivlens::handler::handle_key_events;
+use arxivlens::tui::Tui;
 use ratatui::backend::CrosstermBackend;
 use ratatui::Terminal;
-use ratatui_arxiv::app::{App, AppResult};
-use ratatui_arxiv::event::{Event, EventHandler};
-use ratatui_arxiv::handler::handle_key_events;
-use ratatui_arxiv::tui::Tui;
 use std::io;
 
 fn main() -> AppResult<()> {
