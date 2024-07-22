@@ -1,10 +1,40 @@
+use crate::arxiv_parsing::{parse_arxiv_entries, ArxivEntry};
+use crate::arxiv_query::query_arxiv;
 use arboard::Clipboard;
-use std::error;
-
-use crate::arxiv_entry::{get_from_arxiv, ArxivEntryList};
+use ratatui::widgets::ListState;
+use std::error::Error;
 
 /// Application result type.
-pub type AppResult<T> = std::result::Result<T, Box<dyn error::Error>>;
+pub type AppResult<T> = std::result::Result<T, Box<dyn Error>>;
+
+/// an object with a state refering to the currently selected entry:
+#[derive(Debug)]
+pub struct ArxivEntryList {
+    pub items: Vec<ArxivEntry>,
+    pub state: ListState,
+}
+
+impl FromIterator<(String, Vec<String>, String, String, String, String)> for ArxivEntryList {
+    fn from_iter<T: IntoIterator<Item = (String, Vec<String>, String, String, String, String)>>(
+        iter: T,
+    ) -> Self {
+        let items = iter
+            .into_iter()
+            .map(|(title, authors, summary, id, updated, published)| {
+                ArxivEntry::new(title, authors, summary, id, updated, published)
+            })
+            .collect();
+        let state = ListState::default();
+        Self { items, state }
+    }
+}
+
+pub fn get_from_arxiv() -> Result<ArxivEntryList, Box<dyn Error>> {
+    let content = query_arxiv()?;
+    let items = parse_arxiv_entries(&content)?;
+    let state = ListState::default();
+    Ok(ArxivEntryList { items, state })
+}
 
 /// Application.
 #[derive(Debug)]
@@ -64,7 +94,7 @@ impl App {
         let id = if let Some(i) = self.arxiv_entries.state.selected() {
             self.arxiv_entries.items[i].id.clone()
         } else {
-            "Nothin selected".to_string()
+            "Nothing selected".to_string()
         };
 
         // Set the clipboard

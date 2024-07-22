@@ -13,5 +13,6 @@ pub mod tui;
 /// Event handler.
 pub mod handler;
 
-pub mod arxiv_entry;
+/// Arxiv tools
+pub mod arxiv_parsing;
 pub mod arxiv_query;
