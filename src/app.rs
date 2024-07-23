@@ -67,12 +67,12 @@ pub struct App {
 
 impl App {
     /// Constructs a new instance of [`App`].
-    pub fn new(category: Option<&str>) -> Self {
+    pub fn new(category: Option<&str>, author: Option<&str>) -> Self {
         Self {
             running: true,
             arxiv_entries: get_from_arxiv(
                 category,
-                None,
+                author,
                 Some(DEFAULT_START_INDEX),
                 Some(DEFAULT_MAX_RESULTS),
                 Some(DEFAULT_SORT_BY),

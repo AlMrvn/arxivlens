@@ -7,19 +7,29 @@ use ratatui::backend::CrosstermBackend;
 use ratatui::Terminal;
 use std::io;
 
-#[derive(Parser)]
+const DEFAULT_CATEGORY: &str = "quant-ph";
+
+/// Terminal User Interface to explore arXiv
+#[derive(Parser, Debug)]
+#[command(version, about, long_about = None)]
 struct Args {
-    /// The category to query from
+    /// Name of the author to look
+    #[arg(short, long, default_value = None)]
+    author: Option<String>,
+
+    /// Number of times to greet
+    #[arg(short, long, default_value = DEFAULT_CATEGORY)]
     category: Option<String>,
 }
 
 fn main() -> AppResult<()> {
-    // Parse the arguments:
     let args = Args::parse();
-    println!("Fetching arxiv entry for the category: {:?}", args.category);
+
+    println!("Searching in {:?}!", args.category);
+    println!("Searching in {:?}!", args.author);
 
     // Create an application.
-    let mut app = App::new(args.category.as_deref());
+    let mut app = App::new(args.category.as_deref(), args.author.as_deref());
 
     // Initialize the terminal user interface.
     let backend = CrosstermBackend::new(io::stderr());
