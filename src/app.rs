@@ -1,8 +1,14 @@
 use crate::arxiv_parsing::{parse_arxiv_entries, ArxivEntry};
-use crate::arxiv_query::query_arxiv;
+use crate::arxiv_query::{query_arxiv, SortBy, SortOrder};
 use arboard::Clipboard;
 use ratatui::widgets::ListState;
 use std::error::Error;
+
+/// Default values for the query:
+const DEFAULT_START_INDEX: i32 = 0;
+const DEFAULT_MAX_RESULTS: i32 = 200;
+const DEFAULT_SORT_ORDER: SortOrder = SortOrder::Descending;
+const DEFAULT_SORT_BY: SortBy = SortBy::SubmittedDate;
 
 /// Application result type.
 pub type AppResult<T> = std::result::Result<T, Box<dyn Error>>;
@@ -29,8 +35,22 @@ impl FromIterator<(String, Vec<String>, String, String, String, String)> for Arx
     }
 }
 
-pub fn get_from_arxiv() -> Result<ArxivEntryList, Box<dyn Error>> {
-    let content = query_arxiv()?;
+pub fn get_from_arxiv(
+    category: Option<&str>,
+    author: Option<&str>,
+    start_index: Option<i32>,
+    max_results: Option<i32>,
+    sort_by: Option<SortBy>,
+    sort_order: Option<SortOrder>,
+) -> Result<ArxivEntryList, Box<dyn Error>> {
+    let content = query_arxiv(
+        category,
+        author,
+        start_index,
+        max_results,
+        sort_by,
+        sort_order,
+    )?;
     let items = parse_arxiv_entries(&content)?;
     let state = ListState::default();
     Ok(ArxivEntryList { items, state })
@@ -45,19 +65,21 @@ pub struct App {
     pub arxiv_entries: ArxivEntryList,
 }
 
-impl Default for App {
-    fn default() -> Self {
-        Self {
-            running: true,
-            arxiv_entries: get_from_arxiv().expect("Error while retrieving arxiv entries."),
-        }
-    }
-}
-
 impl App {
     /// Constructs a new instance of [`App`].
-    pub fn new() -> Self {
-        Self::default()
+    pub fn new(category: Option<&str>) -> Self {
+        Self {
+            running: true,
+            arxiv_entries: get_from_arxiv(
+                category,
+                None,
+                Some(DEFAULT_START_INDEX),
+                Some(DEFAULT_MAX_RESULTS),
+                Some(DEFAULT_SORT_BY),
+                Some(DEFAULT_SORT_ORDER),
+            )
+            .expect("Error while retrieving arxiv entries."),
+        }
     }
 
     /// Handles the tick event of the terminal.

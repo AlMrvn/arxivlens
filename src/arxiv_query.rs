@@ -65,8 +65,8 @@ impl Display for SortOrder {
 fn get_search_query(
     category: Option<&str>,
     author: Option<&str>,
-    start_index: Option<usize>,
-    max_results: Option<usize>,
+    start_index: Option<i32>,
+    max_results: Option<i32>,
     sort_by: Option<SortBy>,
     sort_order: Option<SortOrder>,
 ) -> String {
@@ -123,8 +123,8 @@ fn get_search_query(
 fn get_query_url(
     category: Option<&str>,
     author: Option<&str>,
-    start_index: Option<usize>,
-    max_results: Option<usize>,
+    start_index: Option<i32>,
+    max_results: Option<i32>,
     sort_by: Option<SortBy>,
     sort_order: Option<SortOrder>,
 ) -> String {
@@ -139,14 +139,21 @@ fn get_query_url(
     format!("{}{}", ARXIV_QUERY_BASE_URL, search_query)
 }
 
-pub fn query_arxiv() -> Result<String, Box<dyn Error>> {
+pub fn query_arxiv(
+    category: Option<&str>,
+    author: Option<&str>,
+    start_index: Option<i32>,
+    max_results: Option<i32>,
+    sort_by: Option<SortBy>,
+    sort_order: Option<SortOrder>,
+) -> Result<String, Box<dyn Error>> {
     let query_str = get_query_url(
-        Some("quant-ph"),
-        None,
-        Some(0),
-        Some(200),
-        Some(SortBy::SubmittedDate),
-        Some(SortOrder::Descending),
+        category,
+        author,
+        start_index,
+        max_results,
+        sort_by,
+        sort_order,
     );
     Ok(reqwest::blocking::get(query_str)?.text()?)
 }
