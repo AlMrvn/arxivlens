@@ -48,6 +48,8 @@ pub struct App {
     pub running: bool,
     /// Arxiv entry list:
     pub arxiv_entries: ArxivEntryList,
+    /// Word to highlight in the summary
+    pub summary_highlight: Option<Vec<String>>,
 }
 
 impl App {

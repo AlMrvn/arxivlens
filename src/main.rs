@@ -28,6 +28,10 @@ struct Args {
     /// Number of times to greet
     #[arg(short, long, default_value = DEFAULT_CATEGORY)]
     category: Option<String>,
+
+    /// String to highlight in the summaries
+    #[arg(short, long, default_value = None)]
+    summary_highlight: Option<Vec<String>>,
 }
 
 fn main() -> AppResult<()> {
@@ -59,6 +63,7 @@ fn main() -> AppResult<()> {
     let mut app = App {
         running: true,
         arxiv_entries: ArxivEntryList { items, state },
+        summary_highlight: args.summary_highlight,
     };
 
     // Initialize the terminal user interface.

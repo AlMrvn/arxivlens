@@ -16,12 +16,12 @@ const ORANGE: Color = Color::Rgb(255, 158, 100);
 const TURQUOISE: Color = Color::Rgb(79, 214, 190);
 const TEAL: Color = Color::Rgb(65, 166, 181);
 
-fn split_with_keywords(text: &str, keywords: &[&str]) -> (Vec<String>, Vec<bool>) {
+fn split_with_keywords(text: String, keywords: Vec<String>) -> (Vec<String>, Vec<bool>) {
     let mut text_chunks = vec![];
     let mut is_keyword = vec![];
 
     for word in text.split_whitespace() {
-        if keywords.contains(&word) {
+        if keywords.contains(&word.to_string()) {
             text_chunks.push(word.to_string());
             is_keyword.push(true);
         } else {
@@ -42,8 +42,8 @@ mod tests {
     #[test]
     fn test_split_with_keywords() {
         let text = "This is a text with some keywords like alpha and beta";
-        let keywords = ["alpha", "beta"];
-        let (result, is_keyword) = split_with_keywords(&text, &keywords);
+        let keywords = ["alpha".to_string(), "beta".to_string()];
+        let (result, is_keyword) = split_with_keywords(text.to_string(), keywords.to_vec());
 
         assert_eq!(
             result,
@@ -187,16 +187,27 @@ pub fn render(app: &mut App, frame: &mut Frame) {
     // The abstract of the manuscript.
     // Implementation of the hilight of keywords:
     let mut spans: Vec<Span> = Vec::new();
-    let (splitted_summary, is_keyword) = split_with_keywords(
-        &current_entry.summary,
-        &["error", "correction", "Correction"],
-    );
-    for (chunk, is_key) in splitted_summary.iter().zip(is_keyword.iter()) {
-        if *is_key {
-            spans.push(Span::raw(chunk).style(Style::default().fg(Color::Black).bg(TURQUOISE)));
-        } else {
-            spans.push(Span::raw(chunk).style(Style::default().fg(TEAL).bg(Color::Black)));
+    if let Some(highlight) = &app.summary_highlight {
+        let (splitted_summary, is_keyword) = split_with_keywords(
+            current_entry.summary.clone(),
+            // &["error", "correction", "Correction"],
+            highlight.to_vec(),
+        );
+        for (chunk, is_key) in splitted_summary.iter().zip(is_keyword.iter()) {
+            if *is_key {
+                spans.push(
+                    Span::raw(chunk.clone()).style(Style::default().fg(Color::Black).bg(TURQUOISE)),
+                );
+            } else {
+                spans.push(
+                    Span::raw(chunk.clone()).style(Style::default().fg(TEAL).bg(Color::Black)),
+                );
+            }
         }
+    } else {
+        spans.push(
+            Span::raw(&current_entry.summary).style(Style::default().fg(TEAL).bg(Color::Black)),
+        );
     }
 
     frame.render_widget(
