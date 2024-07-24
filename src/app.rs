@@ -4,12 +4,6 @@ use arboard::Clipboard;
 use ratatui::widgets::ListState;
 use std::error::Error;
 
-/// Default values for the query:
-const DEFAULT_START_INDEX: i32 = 0;
-const DEFAULT_MAX_RESULTS: i32 = 200;
-const DEFAULT_SORT_ORDER: SortOrder = SortOrder::Descending;
-const DEFAULT_SORT_BY: SortBy = SortBy::SubmittedDate;
-
 /// Application result type.
 pub type AppResult<T> = std::result::Result<T, Box<dyn Error>>;
 
@@ -57,20 +51,6 @@ pub struct App {
 }
 
 impl App {
-    /// Constructs a new instance of [`App`].
-    pub fn new(category: Option<&str>, author: Option<&str>) -> Self {
-        Self {
-            running: true,
-            arxiv_entries: get_from_arxiv(
-                Some(DEFAULT_START_INDEX),
-                Some(DEFAULT_MAX_RESULTS),
-                Some(DEFAULT_SORT_BY),
-                Some(DEFAULT_SORT_ORDER),
-            )
-            .expect("Error while retrieving arxiv entries."),
-        }
-    }
-
     /// Handles the tick event of the terminal.
     pub fn tick(&self) {}
 

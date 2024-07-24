@@ -10,7 +10,12 @@ use ratatui::widgets::ListState;
 use ratatui::Terminal;
 use std::io;
 
+/// Default values for the query:
 const DEFAULT_CATEGORY: &str = "quant-ph";
+const DEFAULT_START_INDEX: i32 = 0;
+const DEFAULT_MAX_RESULTS: i32 = 200;
+const DEFAULT_SORT_ORDER: SortOrder = SortOrder::Descending;
+const DEFAULT_SORT_BY: SortBy = SortBy::SubmittedDate;
 
 /// Terminal User Interface to explore arXiv
 #[derive(Parser, Debug)]
@@ -26,7 +31,7 @@ struct Args {
 }
 
 fn main() -> AppResult<()> {
-    // Construct the arXiv query with the user args
+    // --- Construct the arXiv query with the user args ---
     let args = Args::parse();
     let mut queries: Vec<SearchQuery> = Vec::new();
 
@@ -35,15 +40,17 @@ fn main() -> AppResult<()> {
     }
     if let Some(category) = &args.category {
         queries.push(SearchQuery::Category(category.to_string()))
+    } else {
+        queries.push(SearchQuery::Category(DEFAULT_CATEGORY.to_string()))
     }
 
-    // Query the arxiv API:
+    // --- Query the arxiv API ---
     let content = query_arxiv(
         Some(&queries),
-        Some(0),
-        Some(200),
-        Some(SortBy::SubmittedDate),
-        Some(SortOrder::Descending),
+        Some(DEFAULT_START_INDEX),
+        Some(DEFAULT_MAX_RESULTS),
+        Some(DEFAULT_SORT_BY),
+        Some(DEFAULT_SORT_ORDER),
     );
     let items = parse_arxiv_entries(&content?)?;
     let state = ListState::default();
