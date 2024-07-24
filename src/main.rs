@@ -28,15 +28,18 @@ struct Args {
 fn main() -> AppResult<()> {
     // Construct the arXiv query with the user args
     let args = Args::parse();
+    let mut queries: Vec<SearchQuery> = Vec::new();
 
-    let query = vec![
-        SearchQuery::Category(args.category.expect("I am bad")),
-        SearchQuery::Author(args.author.expect("I am bad")),
-    ];
+    if let Some(author) = &args.author {
+        queries.push(SearchQuery::Author(author.to_string()))
+    }
+    if let Some(category) = &args.category {
+        queries.push(SearchQuery::Category(category.to_string()))
+    }
 
     // Query the arxiv API:
     let content = query_arxiv(
-        Some(&query),
+        Some(&queries),
         Some(0),
         Some(200),
         Some(SortBy::SubmittedDate),
