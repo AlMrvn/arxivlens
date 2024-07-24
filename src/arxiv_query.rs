@@ -66,9 +66,11 @@ impl ArxivSearchQuery {
             ArxivSearchQuery::Title(_) => "ti",
             ArxivSearchQuery::Author(_) => "au",
             ArxivSearchQuery::Abstract(_) => "abs",
+            ArxivSearchQuery::Comment(_) => "cm",
+            ArxivSearchQuery::JournalReference(_) => "jr",
             ArxivSearchQuery::Category(_) => "cat",
-            // ... Add categories for other variants ...
-            _ => panic!("Unhandled ArxivSearchQuery variant"),
+            ArxivSearchQuery::ReportNumber(_) => "rn",
+            ArxivSearchQuery::All(_) => "all",
         }
     }
 }

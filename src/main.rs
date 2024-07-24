@@ -1,9 +1,12 @@
-use arxivlens::app::{App, AppResult};
+use arxivlens::app::{App, AppResult, ArxivEntryList};
+use arxivlens::arxiv_parsing::parse_arxiv_entries;
+use arxivlens::arxiv_query::{query_arxiv, ArxivSearchQuery, SortBy, SortOrder};
 use arxivlens::event::{Event, EventHandler};
 use arxivlens::handler::handle_key_events;
 use arxivlens::tui::Tui;
 use clap::Parser;
 use ratatui::backend::CrosstermBackend;
+use ratatui::widgets::ListState;
 use ratatui::Terminal;
 use std::io;
 
@@ -23,13 +26,30 @@ struct Args {
 }
 
 fn main() -> AppResult<()> {
+    // Construct the arXiv query with the user args
     let args = Args::parse();
 
-    println!("Searching in {:?}!", args.category);
-    println!("Searching in {:?}!", args.author);
+    let query = vec![
+        ArxivSearchQuery::Category(args.category.expect("I am bad")),
+        ArxivSearchQuery::Author(args.author.expect("I am bad")),
+    ];
+
+    // Query the arxiv API:
+    let content = query_arxiv(
+        Some(&query),
+        Some(0),
+        Some(200),
+        Some(SortBy::SubmittedDate),
+        Some(SortOrder::Descending),
+    );
+    let items = parse_arxiv_entries(&content?)?;
+    let state = ListState::default();
 
     // Create an application.
-    let mut app = App::new(args.category.as_deref(), args.author.as_deref());
+    let mut app = App {
+        running: true,
+        arxiv_entries: ArxivEntryList { items, state },
+    };
 
     // Initialize the terminal user interface.
     let backend = CrosstermBackend::new(io::stderr());
