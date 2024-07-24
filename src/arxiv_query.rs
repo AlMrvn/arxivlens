@@ -16,12 +16,24 @@
 //!
 //! [`arXiv API`] : https://info.arxiv.org/help/api/user-manual.html
 
+use std::collections::BTreeMap;
 use std::error::Error;
 use std::fmt::Display;
 
 const ARXIV_QUERY_BASE_URL: &'static str = "http://export.arxiv.org/api/query?";
 
 // ----- Enum for the option of the arXiv query -----
+pub enum ArxivSearchQuery {
+    Title(String),
+    Author(String),
+    Abstract(String),
+    Comment(String),
+    JournalReference(String),
+    Category(String),
+    ReportNumber(String),
+    All(String),
+}
+
 pub enum SortBy {
     Relevance,
     LastUpdatedDate,
@@ -31,6 +43,34 @@ pub enum SortBy {
 pub enum SortOrder {
     Ascending,
     Descending,
+}
+
+impl Display for ArxivSearchQuery {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ArxivSearchQuery::Title(term) => write!(f, "{}", term),
+            ArxivSearchQuery::Author(term) => write!(f, "{}", term),
+            ArxivSearchQuery::Abstract(term) => write!(f, "{}", term),
+            ArxivSearchQuery::Comment(term) => write!(f, "{}", term),
+            ArxivSearchQuery::JournalReference(term) => write!(f, "{}", term),
+            ArxivSearchQuery::Category(term) => write!(f, "{}", term),
+            ArxivSearchQuery::ReportNumber(term) => write!(f, "{}", term),
+            ArxivSearchQuery::All(term) => write!(f, "{}", term),
+        }
+    }
+}
+
+impl ArxivSearchQuery {
+    fn category(&self) -> &'static str {
+        match self {
+            ArxivSearchQuery::Title(_) => "ti",
+            ArxivSearchQuery::Author(_) => "au",
+            ArxivSearchQuery::Abstract(_) => "abs",
+            ArxivSearchQuery::Category(_) => "cat",
+            // ... Add categories for other variants ...
+            _ => panic!("Unhandled ArxivSearchQuery variant"),
+        }
+    }
 }
 
 impl Display for SortBy {
@@ -60,47 +100,64 @@ impl Display for SortOrder {
     }
 }
 
+fn group_and_join_queries(queries: &[ArxivSearchQuery]) -> String {
+    // Using a BTreeMap to have an ordering of the keys and hence deterministic output.
+    let mut grouped_queries: BTreeMap<&'static str, Vec<String>> = BTreeMap::new();
+
+    for query in queries {
+        grouped_queries
+            .entry(query.category())
+            .or_insert(Vec::new())
+            .push(format!("{}", query));
+    }
+
+    let mut joined_query: Vec<String> = Vec::new();
+    for (category, category_queries) in grouped_queries.iter_mut() {
+        let mut category_query = format!("{}:", category);
+        category_query.push_str(&category_queries.join("+AND+"));
+        joined_query.push(category_query);
+    }
+    joined_query.join("&")
+}
+
 /// Constructing the search query string to add to the base url.
-///
 fn get_search_query(
-    category: Option<&str>,
-    author: Option<&str>,
+    search_queries: Option<&[ArxivSearchQuery]>,
     start_index: Option<i32>,
     max_results: Option<i32>,
     sort_by: Option<SortBy>,
     sort_order: Option<SortOrder>,
 ) -> String {
-    let mut search_query: Vec<String> = Vec::new();
+    let mut query: Vec<String> = Vec::new();
 
-    if let Some(cat) = category {
-        search_query.push(format!("cat:{}", cat));
-    }
-
-    if let Some(auth) = author {
-        search_query.push(format!("au:{}", auth));
+    if let Some(search_queries) = search_queries {
+        query.push(format!(
+            "search_query={}",
+            group_and_join_queries(search_queries)
+        ));
     }
 
     if let Some(start) = start_index {
-        search_query.push(format!("start={}", start))
+        query.push(format!("start={}", start))
     }
 
     if let Some(max_res) = max_results {
-        search_query.push(format!("max_results={}", max_res))
+        query.push(format!("max_results={}", max_res))
     }
 
     if let Some(sort_by) = sort_by {
-        search_query.push(format!("sortBy={}", sort_by))
+        query.push(format!("sortBy={}", sort_by))
     }
     if let Some(sort_order) = sort_order {
-        search_query.push(format!("sortOrder={}", sort_order))
+        query.push(format!("sortOrder={}", sort_order))
     }
 
     // If the string search str is empty, we return an empty string:
-    if search_query.len() == 0 {
+    if query.len() == 0 {
         String::new()
     // Else, we return the query with each type of query separated with an &
     } else {
-        format!("search_query={}", search_query.join("&"))
+        format!("{}", query.join("&"))
     }
 }
 
@@ -121,16 +178,14 @@ fn get_search_query(
 /// * `sort_order`: An optional `SortOrder` enum variant specifying the sorting order (ascending or descending).
 ///     * Defaults to the default order associated with the chosen `sort_by` option.
 fn get_query_url(
-    category: Option<&str>,
-    author: Option<&str>,
+    search_queries: Option<&[ArxivSearchQuery]>,
     start_index: Option<i32>,
     max_results: Option<i32>,
     sort_by: Option<SortBy>,
     sort_order: Option<SortOrder>,
 ) -> String {
     let search_query = get_search_query(
-        category,
-        author,
+        search_queries,
         start_index,
         max_results,
         sort_by,
@@ -140,21 +195,20 @@ fn get_query_url(
 }
 
 pub fn query_arxiv(
-    category: Option<&str>,
-    author: Option<&str>,
+    search_queries: Option<&[ArxivSearchQuery]>,
     start_index: Option<i32>,
     max_results: Option<i32>,
     sort_by: Option<SortBy>,
     sort_order: Option<SortOrder>,
 ) -> Result<String, Box<dyn Error>> {
     let query_str = get_query_url(
-        category,
-        author,
+        search_queries,
         start_index,
         max_results,
         sort_by,
         sort_order,
     );
+    println!("{}", query_str);
     Ok(reqwest::blocking::get(query_str)?.text()?)
 }
 
@@ -165,13 +219,19 @@ mod tests {
     // ----- Testing the construction of the query url -----
     #[test]
     fn test_get_search_query_basic() {
-        let url = get_query_url(None, None, None, None, None, None);
+        let url = get_query_url(None, None, None, None, None);
         assert_eq!(url, ARXIV_QUERY_BASE_URL);
     }
 
     #[test]
     fn test_get_search_query_category() {
-        let url = get_query_url(Some("cs.AI"), None, None, None, None, None);
+        let url = get_query_url(
+            Some(&[ArxivSearchQuery::Category("cs.AI".to_string())]),
+            None,
+            None,
+            None,
+            None,
+        );
         assert_eq!(
             url,
             format!("{}search_query=cat:cs.AI", ARXIV_QUERY_BASE_URL)
@@ -180,7 +240,13 @@ mod tests {
 
     #[test]
     fn test_get_search_query_author() {
-        let url = get_query_url(None, Some("Albert Einstein"), None, None, None, None);
+        let url = get_query_url(
+            Some(&[ArxivSearchQuery::Author("Albert Einstein".to_string())]),
+            None,
+            None,
+            None,
+            None,
+        );
         assert_eq!(
             url,
             format!("{}search_query=au:Albert Einstein", ARXIV_QUERY_BASE_URL)
@@ -190,8 +256,10 @@ mod tests {
     #[test]
     fn test_get_search_query_all_params() {
         let url = get_query_url(
-            Some("stat.ML"),
-            Some("Jane Doe"),
+            Some(&[
+                ArxivSearchQuery::Author("Jane Doe".to_string()),
+                ArxivSearchQuery::Category("stat.ML".to_string()),
+            ]),
             Some(10),
             Some(50),
             Some(SortBy::LastUpdatedDate),
@@ -200,9 +268,49 @@ mod tests {
         assert_eq!(
         url,
         format!(
-          "{}search_query=cat:stat.ML&au:Jane Doe&start=10&max_results=50&sortBy=lastUpdatedDate&sortOrder=descending",
+          "{}search_query=au:Jane Doe&cat:stat.ML&start=10&max_results=50&sortBy=lastUpdatedDate&sortOrder=descending",
           ARXIV_QUERY_BASE_URL
         )
       );
+    }
+
+    #[test]
+    fn test_group_and_join_queries() {
+        // Sample list of ArxivSearchQuery structs
+        let queries = vec![
+            ArxivSearchQuery::Category("quant-ph".to_string()),
+            ArxivSearchQuery::Author("Doe".to_string()),
+            ArxivSearchQuery::Title("Holes".to_string()),
+            ArxivSearchQuery::Abstract("Entanglement".to_string()),
+        ];
+
+        // Expected encoded query string
+        let expected_query = "abs:Entanglement&au:Doe&cat:quant-ph&ti:Holes";
+
+        // Test the function and compare with expected result
+        let encoded_query = group_and_join_queries(&queries);
+        assert_eq!(encoded_query, expected_query);
+    }
+
+    #[test]
+    fn test_group_and_join_queries_multiple_same_category() {
+        // Sample list of ArxivSearchQuery structs
+        let queries = vec![
+            ArxivSearchQuery::Title("Quantum Mechanics".to_string()),
+            ArxivSearchQuery::Author("John Doe".to_string()),
+            ArxivSearchQuery::Title("Black Holes".to_string()),
+            ArxivSearchQuery::Title("Relativity".to_string()),
+            ArxivSearchQuery::Abstract("Entanglement".to_string()),
+        ];
+
+        // Expected encoded query string
+        let expected_query =
+            "abs:Entanglement&au:John Doe&ti:Quantum Mechanics+AND+Black Holes+AND+Relativity";
+
+        // Test the function
+        let encoded_query = group_and_join_queries(&queries);
+
+        // Assert encoded query matches expectation
+        assert_eq!(encoded_query, expected_query);
     }
 }
