@@ -1,6 +1,6 @@
 use arxivlens::app::{App, AppResult, ArxivEntryList};
 use arxivlens::arxiv_parsing::parse_arxiv_entries;
-use arxivlens::arxiv_query::{query_arxiv, ArxivSearchQuery, SortBy, SortOrder};
+use arxivlens::arxiv_query::{query_arxiv, SearchQuery, SortBy, SortOrder};
 use arxivlens::event::{Event, EventHandler};
 use arxivlens::handler::handle_key_events;
 use arxivlens::tui::Tui;
@@ -30,8 +30,8 @@ fn main() -> AppResult<()> {
     let args = Args::parse();
 
     let query = vec![
-        ArxivSearchQuery::Category(args.category.expect("I am bad")),
-        ArxivSearchQuery::Author(args.author.expect("I am bad")),
+        SearchQuery::Category(args.category.expect("I am bad")),
+        SearchQuery::Author(args.author.expect("I am bad")),
     ];
 
     // Query the arxiv API:

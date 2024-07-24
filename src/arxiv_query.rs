@@ -1,18 +1,20 @@
 //! Query interface for the [`arXiv API`]
 //!
-//! This module provide the necessary tool to query (using reqwest) and pasrse
-//! the arxiv XML file and cast it into a struct found in arxiv_entry module.
-//!
-//! Context for the API:
-//! The parameters for each of the API has a base url that reads:
+//! This module provide the necessary tool to query the [`arXiv API`].
 //! `http://export.arxiv.org/api/query?{parameters}`
 //!
 //! The parameters are separated with a `&` in the construction of the url. Here are the one
 //! useable in this module:
-//! - search_query : Search query to find article,
-//! - id_list: a list of id to search from,
-//! - start and max_results allows to download chunk of the data.
+//! - `search_query`: Search query to find articles.
+//! - `id_list`: A list of IDs to search from.
+//! - `start` and `max_results`: Allow downloading chunks of data.
+//! - `sortBy`: Specifies how to sort the retrieved arXiv entries.
+//! - `sortOrder`: Defines the sorting order of the entries ("ascending" or "descending").
 //!
+//! Here is an example of a search query:
+//! http://export.arxiv.org/api/query?search_query=ti:"electron thermal conductivity"&sortBy=lastUpdatedDate&sortOrder=ascending
+//!
+//! For more in-depth documentation, look at the [`arXiv API`] user manual.
 //!
 //! [`arXiv API`] : https://info.arxiv.org/help/api/user-manual.html
 
@@ -22,17 +24,94 @@ use std::fmt::Display;
 
 const ARXIV_QUERY_BASE_URL: &'static str = "http://export.arxiv.org/api/query?";
 
-// ----- Enum for the option of the arXiv query -----
-pub enum ArxivSearchQuery {
+// --- Construct the search query ---
+
+/// Specifies different query options for searching the arXiv archive.
+pub enum SearchQuery {
+    /// Search for articles by title.
     Title(String),
+    /// Search for articles by author name.
     Author(String),
+    /// Search for articles containing keywords in the abstract.
     Abstract(String),
+    /// Search for articles containing keywords in the comment field (less common).
     Comment(String),
+    /// Search for articles by journal reference information.
     JournalReference(String),
+    /// Search for articles within a specific arXiv category (e.g., "cs.AI").
     Category(String),
+    /// Search for articles by report number (usually for internal arXiv purposes).
     ReportNumber(String),
+    /// Search for articles using a general query string across all fields.
+    /// Use with caution as it might lead to unexpected results due to potential broad matches.
     All(String),
 }
+
+impl SearchQuery {
+    /// Retrieves the corresponding category code for a given `SearchQuery` variant.
+    ///
+    /// This function is used internally to map each `SearchQuery` variant (e.g.,
+    /// `Title`, `Author`) to its corresponding category code required by the
+    /// arXiv API ("ti", "au"). The returned string can be used to construct the final query
+    /// string.
+    fn category(&self) -> &'static str {
+        match self {
+            SearchQuery::Title(_) => "ti",
+            SearchQuery::Author(_) => "au",
+            SearchQuery::Abstract(_) => "abs",
+            SearchQuery::Comment(_) => "cm",
+            SearchQuery::JournalReference(_) => "jr",
+            SearchQuery::Category(_) => "cat",
+            SearchQuery::ReportNumber(_) => "rn",
+            SearchQuery::All(_) => "all",
+        }
+    }
+}
+
+impl Display for SearchQuery {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            SearchQuery::Title(term) => write!(f, "{}", term),
+            SearchQuery::Author(term) => write!(f, "{}", term),
+            SearchQuery::Abstract(term) => write!(f, "{}", term),
+            SearchQuery::Comment(term) => write!(f, "{}", term),
+            SearchQuery::JournalReference(term) => write!(f, "{}", term),
+            SearchQuery::Category(term) => write!(f, "{}", term),
+            SearchQuery::ReportNumber(term) => write!(f, "{}", term),
+            SearchQuery::All(term) => write!(f, "{}", term),
+        }
+    }
+}
+
+/// Groups and joins search queries for constructing a well-formatted arXiv API query string.
+///
+/// This function takes a slice of `SeqrchQuery` structs and groups them by their
+/// category. It then joins the queries within each category using `+AND+` and
+/// combines the category groups with `&` to create a single, valid query string
+/// suitable for the arXiv API.
+///
+/// The function utilizes a `BTreeMap` to ensure a deterministic output order
+/// for the categories and their joined queries.
+fn group_and_join_queries(search_queries: &[SearchQuery]) -> String {
+    let mut grouped_queries: BTreeMap<&'static str, Vec<String>> = BTreeMap::new();
+
+    for query in search_queries {
+        grouped_queries
+            .entry(query.category())
+            .or_insert(Vec::new())
+            .push(format!("{}", query));
+    }
+
+    let mut joined_query: Vec<String> = Vec::new();
+    for (category, category_queries) in grouped_queries.iter_mut() {
+        let mut category_query = format!("{}:", category);
+        category_query.push_str(&category_queries.join("+AND+"));
+        joined_query.push(category_query);
+    }
+    joined_query.join("&")
+}
+
+// --- Option for the query ---
 
 pub enum SortBy {
     Relevance,
@@ -43,36 +122,6 @@ pub enum SortBy {
 pub enum SortOrder {
     Ascending,
     Descending,
-}
-
-impl Display for ArxivSearchQuery {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            ArxivSearchQuery::Title(term) => write!(f, "{}", term),
-            ArxivSearchQuery::Author(term) => write!(f, "{}", term),
-            ArxivSearchQuery::Abstract(term) => write!(f, "{}", term),
-            ArxivSearchQuery::Comment(term) => write!(f, "{}", term),
-            ArxivSearchQuery::JournalReference(term) => write!(f, "{}", term),
-            ArxivSearchQuery::Category(term) => write!(f, "{}", term),
-            ArxivSearchQuery::ReportNumber(term) => write!(f, "{}", term),
-            ArxivSearchQuery::All(term) => write!(f, "{}", term),
-        }
-    }
-}
-
-impl ArxivSearchQuery {
-    fn category(&self) -> &'static str {
-        match self {
-            ArxivSearchQuery::Title(_) => "ti",
-            ArxivSearchQuery::Author(_) => "au",
-            ArxivSearchQuery::Abstract(_) => "abs",
-            ArxivSearchQuery::Comment(_) => "cm",
-            ArxivSearchQuery::JournalReference(_) => "jr",
-            ArxivSearchQuery::Category(_) => "cat",
-            ArxivSearchQuery::ReportNumber(_) => "rn",
-            ArxivSearchQuery::All(_) => "all",
-        }
-    }
 }
 
 impl Display for SortBy {
@@ -102,29 +151,24 @@ impl Display for SortOrder {
     }
 }
 
-fn group_and_join_queries(queries: &[ArxivSearchQuery]) -> String {
-    // Using a BTreeMap to have an ordering of the keys and hence deterministic output.
-    let mut grouped_queries: BTreeMap<&'static str, Vec<String>> = BTreeMap::new();
-
-    for query in queries {
-        grouped_queries
-            .entry(query.category())
-            .or_insert(Vec::new())
-            .push(format!("{}", query));
-    }
-
-    let mut joined_query: Vec<String> = Vec::new();
-    for (category, category_queries) in grouped_queries.iter_mut() {
-        let mut category_query = format!("{}:", category);
-        category_query.push_str(&category_queries.join("+AND+"));
-        joined_query.push(category_query);
-    }
-    joined_query.join("&")
-}
-
-/// Constructing the search query string to add to the base url.
+/// Constructs a well-formatted search query string for the arXiv API.
+///
+/// This function takes various optional parameters for constructing a complete search query
+/// string that can be appended to the arXiv API base URL. It handles parameters like:
+///
+/// - `search_queries`: An optional slice of `SearchQuery` structs representing the search criteria.
+/// - `start_index`: An optional integer specifying the starting index for result retrieval (pagination).
+/// - `max_results`: An optional integer specifying the maximum number of results to retrieve.
+/// - `sort_by`: An optional `SortBy` enum specifying how to sort the retrieved entries.
+/// - `sort_order`: An optional `SortOrder` enum specifying the sorting order (ascending or descending).
+///
+/// The function utilizes the `group_and_join_queries` function to format the `search_queries`
+/// if provided. It then combines all parameters with appropriate separators (`=`, `&`) to form
+/// a valid and complete query string.
+///
+/// If no search parameters are provided, an empty string is returned.
 fn get_search_query(
-    search_queries: Option<&[ArxivSearchQuery]>,
+    search_queries: Option<&[SearchQuery]>,
     start_index: Option<i32>,
     max_results: Option<i32>,
     sort_by: Option<SortBy>,
@@ -154,33 +198,35 @@ fn get_search_query(
         query.push(format!("sortOrder={}", sort_order))
     }
 
-    // If the string search str is empty, we return an empty string:
     if query.len() == 0 {
         String::new()
-    // Else, we return the query with each type of query separated with an &
     } else {
         format!("{}", query.join("&"))
     }
 }
 
-/// Constructs a URL string for querying the arXiv archive based on search parameters.
+/// Constructs the complete URL for querying the arXiv archive.
 ///
-/// This function takes various optional parameters to construct a URL string suitable
-/// for querying the arXiv archive.
+/// This function takes various optional parameters for constructing a complete search query
+/// string that can be appended to the arXiv API base URL. It handles parameters like:
 ///
-/// Parameters:
+/// - `search_queries`: An optional slice of `SearchQuery` structs representing the search criteria.
+/// - `start_index`: An optional integer specifying the starting index for result retrieval (pagination).
+/// - `max_results`: An optional integer specifying the maximum number of results to retrieve.
+/// - `sort_by`: An optional `SortBy` enum specifying how to sort the retrieved entries.
+/// - `sort_order`: An optional `SortOrder` enum specifying the sorting order (ascending or descending).
 ///
-/// * `category`: An optional arXiv category to search within.
-/// * `author`: An optional reference to a string slice representing the author's name.
-/// * `start_index`: An optional `usize` representing the starting index for search results.
-/// * `max_results`: An optional `usize` representing the maximum number of results to return.
-///     * If not provided, a default value (`DEFAULT_MAX_RESULTS`) is used.
-/// * `sort_by`: An optional `SortBy` enum variant specifying the sorting criteria for results.
-///     * Defaults to `DEFAULT_SORT_BY` if not provided.
-/// * `sort_order`: An optional `SortOrder` enum variant specifying the sorting order (ascending or descending).
-///     * Defaults to the default order associated with the chosen `sort_by` option.
+/// This function construct the final URL for querying the arXiv archive. It accomplishes this by:
+///
+/// 1. **Calling `get_search_query`**: It calls the `get_search_query` function with the provided
+///    parameters to generate the formatted search query string.
+/// 2. **Appending Search Query**: It then appends the generated search query string to the
+///    predefined `ARXIV_QUERY_BASE_URL` constant, which specifies the base URL for arXiv API queries.
+///
+/// By combining these steps, this function creates a complete and valid URL ready to be used
+/// for fetching data from the arXiv archive.
 fn get_query_url(
-    search_queries: Option<&[ArxivSearchQuery]>,
+    search_queries: Option<&[SearchQuery]>,
     start_index: Option<i32>,
     max_results: Option<i32>,
     sort_by: Option<SortBy>,
@@ -196,8 +242,9 @@ fn get_query_url(
     format!("{}{}", ARXIV_QUERY_BASE_URL, search_query)
 }
 
+/// Query arXiv with the query url.
 pub fn query_arxiv(
-    search_queries: Option<&[ArxivSearchQuery]>,
+    search_queries: Option<&[SearchQuery]>,
     start_index: Option<i32>,
     max_results: Option<i32>,
     sort_by: Option<SortBy>,
@@ -210,7 +257,6 @@ pub fn query_arxiv(
         sort_by,
         sort_order,
     );
-    println!("{}", query_str);
     Ok(reqwest::blocking::get(query_str)?.text()?)
 }
 
@@ -228,7 +274,7 @@ mod tests {
     #[test]
     fn test_get_search_query_category() {
         let url = get_query_url(
-            Some(&[ArxivSearchQuery::Category("cs.AI".to_string())]),
+            Some(&[SearchQuery::Category("cs.AI".to_string())]),
             None,
             None,
             None,
@@ -243,7 +289,7 @@ mod tests {
     #[test]
     fn test_get_search_query_author() {
         let url = get_query_url(
-            Some(&[ArxivSearchQuery::Author("Albert Einstein".to_string())]),
+            Some(&[SearchQuery::Author("Albert Einstein".to_string())]),
             None,
             None,
             None,
@@ -259,8 +305,8 @@ mod tests {
     fn test_get_search_query_all_params() {
         let url = get_query_url(
             Some(&[
-                ArxivSearchQuery::Author("Jane Doe".to_string()),
-                ArxivSearchQuery::Category("stat.ML".to_string()),
+                SearchQuery::Author("Jane Doe".to_string()),
+                SearchQuery::Category("stat.ML".to_string()),
             ]),
             Some(10),
             Some(50),
@@ -278,12 +324,12 @@ mod tests {
 
     #[test]
     fn test_group_and_join_queries() {
-        // Sample list of ArxivSearchQuery structs
+        // Sample list of SearchQuery structs
         let queries = vec![
-            ArxivSearchQuery::Category("quant-ph".to_string()),
-            ArxivSearchQuery::Author("Doe".to_string()),
-            ArxivSearchQuery::Title("Holes".to_string()),
-            ArxivSearchQuery::Abstract("Entanglement".to_string()),
+            SearchQuery::Category("quant-ph".to_string()),
+            SearchQuery::Author("Doe".to_string()),
+            SearchQuery::Title("Holes".to_string()),
+            SearchQuery::Abstract("Entanglement".to_string()),
         ];
 
         // Expected encoded query string
@@ -296,13 +342,13 @@ mod tests {
 
     #[test]
     fn test_group_and_join_queries_multiple_same_category() {
-        // Sample list of ArxivSearchQuery structs
+        // Sample list of SearchQuery structs
         let queries = vec![
-            ArxivSearchQuery::Title("Quantum Mechanics".to_string()),
-            ArxivSearchQuery::Author("John Doe".to_string()),
-            ArxivSearchQuery::Title("Black Holes".to_string()),
-            ArxivSearchQuery::Title("Relativity".to_string()),
-            ArxivSearchQuery::Abstract("Entanglement".to_string()),
+            SearchQuery::Title("Quantum Mechanics".to_string()),
+            SearchQuery::Author("John Doe".to_string()),
+            SearchQuery::Title("Black Holes".to_string()),
+            SearchQuery::Title("Relativity".to_string()),
+            SearchQuery::Abstract("Entanglement".to_string()),
         ];
 
         // Expected encoded query string
