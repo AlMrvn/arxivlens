@@ -18,7 +18,7 @@ Usage: arxivlens [OPTIONS]
 
 Options:
   -a, --author <AUTHOR>                        Name of the author to look
-  -c, --category <CATEGORY>                    Number of times to greet [default: quant-ph]
+  -c, --category <CATEGORY>                    Category to look [default: quant-ph]
   -s, --summary-highlight <SUMMARY_HIGHLIGHT>  String to highlight in the summaries
   -h, --help                                   Print help
   -V, --version                                Print version
