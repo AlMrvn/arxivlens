@@ -6,8 +6,8 @@ This project arose from a desire to create a convenient way to explore the lates
 
 ## Features
 - Browse new abstracts in your chosen category (default: "quant-ph").
-- Search for specific keywords within summaries (using -s flag).
-- Highlight authors you know of in the summaries (using -a flag).
+- Highlight specific keywords within summaries (using -s flag).
+- Search for authors you know of in the author list through arXiv query API (using -a flag).
 
 Here is the helper:
 
