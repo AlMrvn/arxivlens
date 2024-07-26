@@ -5,6 +5,9 @@ ArxivLens is a Rust-based terminal user interface (TUI) application that helps y
 This project arose from a desire to create a convenient way to explore the latest arXiv entries in specific categories (like "quant-ph"). The goal was to replicate the experience of browsing submitted manuscripts on the arXiv website, allowing you to scan through abstracts and search for keywords or familiar authors. Additionally, it served as a platform for myself to experiment and learn with the Rust programming language.
 
 ## Features
+
+![TUI interface](screenshot.png)
+
 - Browse new abstracts in your chosen category (default: "quant-ph").
 - Highlight specific keywords within summaries (using -s flag).
 - Search for authors you know of in the author list through arXiv query API (using -a flag).
