@@ -24,6 +24,13 @@ Options:
   -V, --version                                Print version
 ```
 
+## Installation
+To install this as a CLI, you'll need [Rust installed](https://www.rust-lang.org/tools/install) then copy this repo and use cargo to compile the project inot your path:
+```bash
+cargo install --path .
+```
+You will then be able to use the command `arxivlens` from any place in your system
+
 ## License:
 
 This project is licensed under the MIT license.
