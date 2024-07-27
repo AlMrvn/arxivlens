@@ -98,7 +98,7 @@ fn render_selected_entry(app: &mut App, frame: &mut Frame, area: Rect) {
     render_entry_with_pattern_highlight(
         " Title ",
         &current_entry.title,
-        None,
+        app.summary_highlight,
         frame,
         sub_layout[0],
     );
@@ -116,13 +116,7 @@ fn render_selected_entry(app: &mut App, frame: &mut Frame, area: Rect) {
     render_entry_with_pattern_highlight(
         " Abstract ",
         &current_entry.summary,
-        Some(
-            &app.summary_highlight
-                .iter()
-                .map(|s| s.as_str())
-                .collect::<Vec<&str>>()
-                .as_slice(),
-        ),
+        app.summary_highlight,
         frame,
         sub_layout[2],
     )

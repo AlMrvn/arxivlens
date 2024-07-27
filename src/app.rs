@@ -43,16 +43,16 @@ pub fn get_from_arxiv(
 
 /// Application.
 #[derive(Debug)]
-pub struct App {
+pub struct App<'a> {
     /// Is the application running?
     pub running: bool,
     /// Arxiv entry list:
     pub arxiv_entries: ArxivEntryList,
     /// Word to highlight in the summary
-    pub summary_highlight: Vec<String>,
+    pub summary_highlight: Option<&'a [&'a str]>,
 }
 
-impl App {
+impl App<'_> {
     /// Handles the tick event of the terminal.
     pub fn tick(&self) {}
 
