@@ -15,7 +15,6 @@ use crate::app::App;
 const ORANGE: Color = Color::Rgb(255, 158, 100);
 const TURQUOISE: Color = Color::Rgb(79, 214, 190);
 const TEAL: Color = Color::Rgb(65, 166, 181);
-const TITLE_STYLE: Style = Style::new().fg(ORANGE);
 const HIGHLIGHT_STYLE: Style = Style::new()
     .fg(TEAL)
     .bg(Color::White)
@@ -23,15 +22,13 @@ const HIGHLIGHT_STYLE: Style = Style::new()
 const MAIN_STYLE: Style = Style::new().fg(TEAL).bg(Color::Black);
 
 // Create the block:
-fn get_template_block(title: String) -> Block<'static> {
-    let block = Block::new()
-        .title(title)
+fn get_template_block() -> Block<'static> {
+    Block::new()
         .borders(Borders::TOP)
-        .title_style(TITLE_STYLE)
+        .title_style(Style::new().fg(ORANGE))
         .title_alignment(Alignment::Left)
         .border_type(BorderType::Plain)
-        .padding(Padding::horizontal(2));
-    block
+        .padding(Padding::horizontal(2))
 }
 
 fn split_with_keywords(text: String, keywords: Vec<String>) -> (Vec<String>, Vec<bool>) {
@@ -99,15 +96,7 @@ fn render_feed(app: &mut App, frame: &mut Frame, area: Rect) {
 
     // Create a List from all list items and highlight the currently selected one
     let list = List::new(items.clone())
-        .block(
-            Block::new()
-                .title("arXiv Feed")
-                .borders(Borders::ALL)
-                .title_style(TITLE_STYLE)
-                .title_alignment(Alignment::Center)
-                .border_type(BorderType::Rounded)
-                .padding(Padding::vertical(0)),
-        )
+        .block(get_template_block().title("arXiv Feed"))
         .style(MAIN_STYLE)
         .highlight_style(HIGHLIGHT_STYLE)
         .highlight_symbol("> ")
@@ -119,7 +108,7 @@ fn render_feed(app: &mut App, frame: &mut Frame, area: Rect) {
 }
 
 fn render_selected_entry(app: &mut App, frame: &mut Frame, area: Rect) {
-    // W first split the area
+    // first split the area
     let sub_layout = Layout::default()
         .direction(Direction::Vertical)
         .horizontal_margin(2)
@@ -141,7 +130,7 @@ fn render_selected_entry(app: &mut App, frame: &mut Frame, area: Rect) {
     // Title
     frame.render_widget(
         Paragraph::new(Line::raw(current_entry.title.clone()))
-            .block(get_template_block(" Title ".to_string()))
+            .block(get_template_block().title(" Title "))
             .style(MAIN_STYLE)
             .left_aligned()
             .wrap(Wrap { trim: true }),
@@ -151,7 +140,7 @@ fn render_selected_entry(app: &mut App, frame: &mut Frame, area: Rect) {
     // Authors
     frame.render_widget(
         Paragraph::new(format!("{}", current_entry.authors.join(", ")))
-            .block(get_template_block(" Author ".to_string()))
+            .block(get_template_block().title(" Author "))
             .style(MAIN_STYLE)
             .left_aligned()
             .wrap(Wrap { trim: true }),
@@ -178,7 +167,7 @@ fn render_selected_entry(app: &mut App, frame: &mut Frame, area: Rect) {
 
     frame.render_widget(
         Paragraph::new(Line::from(spans))
-            .block(get_template_block(" Abstract ".to_string()))
+            .block(get_template_block().title(" Abstract "))
             .style(MAIN_STYLE)
             .left_aligned()
             .wrap(Wrap { trim: true }),
@@ -200,9 +189,10 @@ pub fn render(app: &mut App, frame: &mut Frame) {
         .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
         .split(frame.size());
 
+    // Render the slectable feed
     render_feed(app, frame, layout[0]);
 
-    // The right panel:
+    // Render the right panel:
     frame.render_widget(
         Paragraph::new("").block(
             Block::new()
