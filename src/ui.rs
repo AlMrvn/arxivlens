@@ -19,6 +19,7 @@ const HIGHLIGHT_STYLE: Style = Style::new()
     .fg(TEAL)
     .bg(Color::White)
     .add_modifier(Modifier::ITALIC);
+const SEARCH_HL_STYLE: Style = Style::new().fg(Color::Black).bg(TURQUOISE);
 const MAIN_STYLE: Style = Style::new().fg(TEAL).bg(Color::Black);
 
 // Create the block:
@@ -154,9 +155,7 @@ fn render_selected_entry(app: &mut App, frame: &mut Frame, area: Rect) {
             split_with_keywords(current_entry.summary.clone(), highlight.to_vec());
         for (chunk, is_key) in splitted_summary.iter().zip(is_keyword.iter()) {
             if *is_key {
-                spans.push(
-                    Span::raw(chunk.clone()).style(Style::default().fg(Color::Black).bg(TURQUOISE)),
-                );
+                spans.push(Span::raw(chunk.clone()).style(SEARCH_HL_STYLE));
             } else {
                 spans.push(Span::raw(chunk.clone()).style(MAIN_STYLE));
             }
