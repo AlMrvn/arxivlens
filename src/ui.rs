@@ -60,7 +60,7 @@ fn render_feed(app: &mut App, frame: &mut Frame, area: Rect) {
 fn render_entry_with_pattern_highlight(
     title: &str,
     entry: &str,
-    patterns: &[&str],
+    patterns: Option<&[&str]>,
     frame: &mut Frame,
     area: Rect,
 ) {
@@ -95,22 +95,20 @@ fn render_selected_entry(app: &mut App, frame: &mut Frame, area: Rect) {
     };
 
     // Title
-    frame.render_widget(
-        Paragraph::new(Line::raw(current_entry.title.clone()))
-            .block(get_template_block().title(" Title "))
-            .style(MAIN_STYLE)
-            .left_aligned()
-            .wrap(Wrap { trim: true }),
+    render_entry_with_pattern_highlight(
+        " Title ",
+        &current_entry.title,
+        None,
+        frame,
         sub_layout[0],
     );
 
     // Authors
-    frame.render_widget(
-        Paragraph::new(format!("{}", current_entry.authors.join(", ")))
-            .block(get_template_block().title(" Author "))
-            .style(MAIN_STYLE)
-            .left_aligned()
-            .wrap(Wrap { trim: true }),
+    render_entry_with_pattern_highlight(
+        " Author ",
+        &format!("{}", current_entry.authors.join(", ")),
+        None,
+        frame,
         sub_layout[1],
     );
 
@@ -118,11 +116,13 @@ fn render_selected_entry(app: &mut App, frame: &mut Frame, area: Rect) {
     render_entry_with_pattern_highlight(
         " Abstract ",
         &current_entry.summary,
-        &app.summary_highlight
-            .iter()
-            .map(|s| s.as_str())
-            .collect::<Vec<&str>>()
-            .as_slice(),
+        Some(
+            &app.summary_highlight
+                .iter()
+                .map(|s| s.as_str())
+                .collect::<Vec<&str>>()
+                .as_slice(),
+        ),
         frame,
         sub_layout[2],
     )

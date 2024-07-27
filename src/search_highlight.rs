@@ -28,7 +28,8 @@ fn search_patterns(text: &str, patterns: &[&str]) -> Vec<(usize, usize)> {
 ///
 /// The lifetime of the output is only due to the lifetime of the text, not of the
 /// patterns.
-pub fn highlight_patterns<'a>(text: &'a str, patterns: &[&str]) -> Line<'a> {
+pub fn highlight_patterns<'a>(text: &'a str, patterns: Option<&[&str]>) -> Line<'a> {
+    let patterns = patterns.unwrap_or_default();
     let match_locs = search_patterns(text, patterns);
 
     if match_locs.len() == 0 {
@@ -72,7 +73,7 @@ mod tests {
             Span::raw("world").style(SEARCH_HL_STYLE),
         ];
 
-        let result = highlight_patterns(text, patterns);
+        let result = highlight_patterns(text, Some(patterns));
 
         assert_eq!(result.spans, expected_spans);
     }
@@ -84,7 +85,18 @@ mod tests {
 
         let expected_spans = vec![Span::raw(text).style(MAIN_STYLE)];
 
-        let result = highlight_patterns(text, patterns);
+        let result = highlight_patterns(text, Some(patterns));
+
+        assert_eq!(result.spans, expected_spans);
+    }
+
+    #[test]
+    fn test_highlight_patterns_none() {
+        let text = "This is a text without any keywords";
+
+        let expected_spans = vec![Span::raw(text).style(MAIN_STYLE)];
+
+        let result = highlight_patterns(text, None);
 
         assert_eq!(result.spans, expected_spans);
     }
