@@ -13,6 +13,9 @@ pub mod tui;
 /// Event handler.
 pub mod handler;
 
+/// Searching keyword
+pub mod search_highlight;
+
 /// Arxiv tools
 pub mod arxiv_parsing;
 pub mod arxiv_query;

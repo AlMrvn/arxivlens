@@ -1,7 +1,7 @@
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
-    text::{Line, Span},
+    text::Line,
     widgets::{
         Block, BorderType, Borders, HighlightSpacing, List, ListDirection, ListItem, Padding,
         Paragraph, Wrap,
@@ -10,6 +10,7 @@ use ratatui::{
 };
 
 use crate::app::App;
+use crate::search_highlight::highlight_patterns;
 
 // Using the Tokyonight color palette. See https://lospec.com/palette-list/tokyo-night.
 const ORANGE: Color = Color::Rgb(255, 158, 100);
@@ -30,58 +31,6 @@ fn get_template_block() -> Block<'static> {
         .title_alignment(Alignment::Left)
         .border_type(BorderType::Plain)
         .padding(Padding::horizontal(2))
-}
-
-fn split_with_keywords(text: String, keywords: Vec<String>) -> (Vec<String>, Vec<bool>) {
-    let mut text_chunks = vec![];
-    let mut is_keyword = vec![];
-
-    for word in text.split_whitespace() {
-        if keywords.contains(&word.to_string()) {
-            text_chunks.push(word.to_string());
-            is_keyword.push(true);
-        } else {
-            text_chunks.push(word.to_string());
-            is_keyword.push(false);
-        }
-        text_chunks.push(" ".to_string());
-        is_keyword.push(false);
-    }
-
-    (text_chunks, is_keyword)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_split_with_keywords() {
-        let text = "This is a text with some keywords like alpha and beta";
-        let keywords = ["alpha".to_string(), "beta".to_string()];
-        let (result, is_keyword) = split_with_keywords(text.to_string(), keywords.to_vec());
-
-        assert_eq!(
-            result,
-            vec![
-                "This".to_string(),
-                "is".to_string(),
-                "a".to_string(),
-                "text".to_string(),
-                "with".to_string(),
-                "some".to_string(),
-                "keywords".to_string(),
-                "like".to_string(),
-                "alpha".to_string(),
-                "and".to_string(),
-                "beta".to_string(),
-            ]
-        );
-        assert_eq!(
-            is_keyword,
-            vec![false, false, false, false, false, false, false, false, true, false, true]
-        );
-    }
 }
 
 /// Renders the arXiv feed with a selection
@@ -106,6 +55,23 @@ fn render_feed(app: &mut App, frame: &mut Frame, area: Rect) {
         .highlight_spacing(HighlightSpacing::Always);
 
     frame.render_stateful_widget(list, area, &mut app.arxiv_entries.state);
+}
+
+fn render_entry_with_pattern_highlight(
+    title: &str,
+    entry: &str,
+    patterns: &[&str],
+    frame: &mut Frame,
+    area: Rect,
+) {
+    frame.render_widget(
+        Paragraph::new(highlight_patterns(entry, patterns))
+            .block(get_template_block().title(title))
+            .style(MAIN_STYLE)
+            .left_aligned()
+            .wrap(Wrap { trim: true }),
+        area,
+    )
 }
 
 fn render_selected_entry(app: &mut App, frame: &mut Frame, area: Rect) {
@@ -149,27 +115,15 @@ fn render_selected_entry(app: &mut App, frame: &mut Frame, area: Rect) {
     );
 
     // Implementation of the highlight of keywords:
-    let mut spans: Vec<Span> = Vec::new();
-    if let Some(highlight) = &app.summary_highlight {
-        let (splitted_summary, is_keyword) =
-            split_with_keywords(current_entry.summary.clone(), highlight.to_vec());
-        for (chunk, is_key) in splitted_summary.iter().zip(is_keyword.iter()) {
-            if *is_key {
-                spans.push(Span::raw(chunk.clone()).style(SEARCH_HL_STYLE));
-            } else {
-                spans.push(Span::raw(chunk.clone()).style(MAIN_STYLE));
-            }
-        }
-    } else {
-        spans.push(Span::raw(&current_entry.summary).style(MAIN_STYLE));
-    }
-
-    frame.render_widget(
-        Paragraph::new(Line::from(spans))
-            .block(get_template_block().title(" Abstract "))
-            .style(MAIN_STYLE)
-            .left_aligned()
-            .wrap(Wrap { trim: true }),
+    render_entry_with_pattern_highlight(
+        " Abstract ",
+        &current_entry.summary,
+        &app.summary_highlight
+            .iter()
+            .map(|s| s.as_str())
+            .collect::<Vec<&str>>()
+            .as_slice(),
+        frame,
         sub_layout[2],
     )
 }

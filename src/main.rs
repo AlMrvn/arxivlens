@@ -63,7 +63,7 @@ fn main() -> AppResult<()> {
     let mut app = App {
         running: true,
         arxiv_entries: ArxivEntryList { items, state },
-        summary_highlight: args.summary_highlight,
+        summary_highlight: args.summary_highlight.unwrap_or_default(),
     };
 
     // Initialize the terminal user interface.
