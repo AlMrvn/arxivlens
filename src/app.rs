@@ -49,7 +49,7 @@ pub struct App {
     /// Arxiv entry list:
     pub arxiv_entries: ArxivEntryList,
     /// Word to highlight in the summary
-    pub summary_highlight: Option<Vec<String>>,
+    pub summary_highlight: Vec<String>,
 }
 
 impl App {
