@@ -1,5 +1,5 @@
 use ratatui::{
-    layout::{Alignment, Constraint, Direction, Layout},
+    layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{
@@ -15,6 +15,24 @@ use crate::app::App;
 const ORANGE: Color = Color::Rgb(255, 158, 100);
 const TURQUOISE: Color = Color::Rgb(79, 214, 190);
 const TEAL: Color = Color::Rgb(65, 166, 181);
+const TITLE_STYLE: Style = Style::new().fg(ORANGE);
+const HIGHLIGHT_STYLE: Style = Style::new()
+    .fg(TEAL)
+    .bg(Color::White)
+    .add_modifier(Modifier::ITALIC);
+const MAIN_STYLE: Style = Style::new().fg(TEAL).bg(Color::Black);
+
+// Create the block:
+fn get_template_block(title: String) -> Block<'static> {
+    let block = Block::new()
+        .title(title)
+        .borders(Borders::TOP)
+        .title_style(TITLE_STYLE)
+        .title_alignment(Alignment::Left)
+        .border_type(BorderType::Plain)
+        .padding(Padding::horizontal(2));
+    block
+}
 
 fn split_with_keywords(text: String, keywords: Vec<String>) -> (Vec<String>, Vec<bool>) {
     let mut text_chunks = vec![];
@@ -68,6 +86,106 @@ mod tests {
     }
 }
 
+/// Renders the arXiv feed with a selection
+fn render_feed(app: &mut App, frame: &mut Frame, area: Rect) {
+    // Iterate through all elements in the `items` and use the title
+    let items: Vec<ListItem> = app
+        .arxiv_entries
+        .items
+        .iter()
+        .enumerate()
+        .map(|(_i, entry)| ListItem::from(entry.title.clone()))
+        .collect();
+
+    // Create a List from all list items and highlight the currently selected one
+    let list = List::new(items.clone())
+        .block(
+            Block::new()
+                .title("arXiv Feed")
+                .borders(Borders::ALL)
+                .title_style(TITLE_STYLE)
+                .title_alignment(Alignment::Center)
+                .border_type(BorderType::Rounded)
+                .padding(Padding::vertical(0)),
+        )
+        .style(MAIN_STYLE)
+        .highlight_style(HIGHLIGHT_STYLE)
+        .highlight_symbol("> ")
+        .repeat_highlight_symbol(true)
+        .direction(ListDirection::TopToBottom)
+        .highlight_spacing(HighlightSpacing::Always);
+
+    frame.render_stateful_widget(list, area, &mut app.arxiv_entries.state);
+}
+
+fn render_selected_entry(app: &mut App, frame: &mut Frame, area: Rect) {
+    // W first split the area
+    let sub_layout = Layout::default()
+        .direction(Direction::Vertical)
+        .horizontal_margin(2)
+        .constraints([
+            Constraint::Length(4), // Title
+            Constraint::Length(6), // Authors
+            Constraint::Min(10),   // Abstract/summary
+        ])
+        .split(area);
+
+    // Authors of the manuscript:
+    let current_entry = if let Some(i) = app.arxiv_entries.state.selected() {
+        &app.arxiv_entries.items[i]
+    } else {
+        // Should implement a default print here ?
+        &app.arxiv_entries.items[0]
+    };
+
+    // Title
+    frame.render_widget(
+        Paragraph::new(Line::raw(current_entry.title.clone()))
+            .block(get_template_block(" Title ".to_string()))
+            .style(MAIN_STYLE)
+            .left_aligned()
+            .wrap(Wrap { trim: true }),
+        sub_layout[0],
+    );
+
+    // Authors
+    frame.render_widget(
+        Paragraph::new(format!("{}", current_entry.authors.join(", ")))
+            .block(get_template_block(" Author ".to_string()))
+            .style(MAIN_STYLE)
+            .left_aligned()
+            .wrap(Wrap { trim: true }),
+        sub_layout[1],
+    );
+
+    // Implementation of the highlight of keywords:
+    let mut spans: Vec<Span> = Vec::new();
+    if let Some(highlight) = &app.summary_highlight {
+        let (splitted_summary, is_keyword) =
+            split_with_keywords(current_entry.summary.clone(), highlight.to_vec());
+        for (chunk, is_key) in splitted_summary.iter().zip(is_keyword.iter()) {
+            if *is_key {
+                spans.push(
+                    Span::raw(chunk.clone()).style(Style::default().fg(Color::Black).bg(TURQUOISE)),
+                );
+            } else {
+                spans.push(Span::raw(chunk.clone()).style(MAIN_STYLE));
+            }
+        }
+    } else {
+        spans.push(Span::raw(&current_entry.summary).style(MAIN_STYLE));
+    }
+
+    frame.render_widget(
+        Paragraph::new(Line::from(spans))
+            .block(get_template_block(" Abstract ".to_string()))
+            .style(MAIN_STYLE)
+            .left_aligned()
+            .wrap(Wrap { trim: true }),
+        sub_layout[2],
+    )
+}
+
 /// Renders the user interface widgets.
 pub fn render(app: &mut App, frame: &mut Frame) {
     // This is where you add new widgets.
@@ -82,148 +200,17 @@ pub fn render(app: &mut App, frame: &mut Frame) {
         .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
         .split(frame.size());
 
-    let sub_layout = Layout::default()
-        .direction(Direction::Vertical)
-        .horizontal_margin(2)
-        .constraints([
-            Constraint::Length(4), // Title
-            Constraint::Length(6), // Authors
-            Constraint::Min(10),   // Abstract/summery
-        ])
-        .split(layout[1]);
+    render_feed(app, frame, layout[0]);
 
-    // Create the block:
-    let block = Block::bordered()
-        .title("arXiv Read")
-        .title_style(Style::default().fg(ORANGE))
-        .title_alignment(Alignment::Center)
-        .border_type(BorderType::Rounded);
-
-    // Iterate through all elements in the `items` and use the title
-    let items: Vec<ListItem> = app
-        .arxiv_entries
-        .items
-        .iter()
-        .enumerate()
-        .map(|(_i, entry)| ListItem::from(entry.title.clone()))
-        .collect();
-
-    // Create a List from all list items and highlight the currently selected one
-    let list = List::new(items.clone())
-        .block(block)
-        .style(Style::default().fg(TEAL).bg(Color::Black))
-        .highlight_style(
-            Style::default()
-                .fg(TEAL)
-                .bg(Color::White)
-                .add_modifier(Modifier::ITALIC),
-        )
-        .highlight_symbol("> ")
-        .repeat_highlight_symbol(true)
-        .direction(ListDirection::TopToBottom)
-        .highlight_spacing(HighlightSpacing::Always);
-
-    // The selection windows
-    frame.render_stateful_widget(list, layout[0], &mut app.arxiv_entries.state);
-
-    // Authors of the manuscript:
-    let current_entry = if let Some(i) = app.arxiv_entries.state.selected() {
-        &app.arxiv_entries.items[i]
-    } else {
-        // Should implement a default print here ?
-        &app.arxiv_entries.items[0]
-    };
-
+    // The right panel:
     frame.render_widget(
-        Paragraph::new("")
-            .block(
-                Block::bordered()
-                    .title(" Abstract ")
-                    .title_style(Style::default().fg(ORANGE))
-                    .border_type(BorderType::Rounded)
-                    .padding(Padding::vertical(2)),
-            )
-            .left_aligned()
-            .wrap(Wrap { trim: true }),
+        Paragraph::new("").block(
+            Block::new()
+                .borders(Borders::ALL)
+                .border_type(BorderType::Rounded),
+        ),
         layout[1],
     );
 
-    // Title
-    frame.render_widget(
-        Paragraph::new(Line::raw(current_entry.title.clone()))
-            .block(
-                Block::new()
-                    .borders(Borders::TOP)
-                    .title(" Title ")
-                    .title_style(Style::default().fg(ORANGE))
-                    .title_alignment(Alignment::Left)
-                    .border_type(BorderType::Plain)
-                    .padding(Padding::horizontal(2)),
-            )
-            .style(Style::default().fg(TEAL).bg(Color::Black))
-            .left_aligned()
-            .wrap(Wrap { trim: true }),
-        sub_layout[0],
-    );
-
-    // Authors
-    frame.render_widget(
-        Paragraph::new(format!("{}", current_entry.authors.join(", ")))
-            .block(
-                Block::new()
-                    .borders(Borders::TOP)
-                    .title(" Authors ")
-                    .title_style(Style::default().fg(ORANGE))
-                    .title_alignment(Alignment::Left)
-                    .border_type(BorderType::Double)
-                    .padding(Padding::horizontal(2)),
-            )
-            .style(Style::default().fg(TEAL).bg(Color::Black))
-            .left_aligned()
-            .wrap(Wrap { trim: true }),
-        sub_layout[1],
-    );
-
-    // The abstract of the manuscript.
-    // Implementation of the hilight of keywords:
-    let mut spans: Vec<Span> = Vec::new();
-    if let Some(highlight) = &app.summary_highlight {
-        let (splitted_summary, is_keyword) = split_with_keywords(
-            current_entry.summary.clone(),
-            // &["error", "correction", "Correction"],
-            highlight.to_vec(),
-        );
-        for (chunk, is_key) in splitted_summary.iter().zip(is_keyword.iter()) {
-            if *is_key {
-                spans.push(
-                    Span::raw(chunk.clone()).style(Style::default().fg(Color::Black).bg(TURQUOISE)),
-                );
-            } else {
-                spans.push(
-                    Span::raw(chunk.clone()).style(Style::default().fg(TEAL).bg(Color::Black)),
-                );
-            }
-        }
-    } else {
-        spans.push(
-            Span::raw(&current_entry.summary).style(Style::default().fg(TEAL).bg(Color::Black)),
-        );
-    }
-
-    frame.render_widget(
-        Paragraph::new(Line::from(spans))
-            .block(
-                Block::new()
-                    .borders(Borders::TOP)
-                    .title(" Abstract ")
-                    .title_style(Style::default().fg(ORANGE))
-                    .title_alignment(Alignment::Left)
-                    .border_type(BorderType::Plain)
-                    .padding(Padding::horizontal(2)),
-            )
-            .style(Style::default().fg(TEAL).bg(Color::Black))
-            .left_aligned()
-            .wrap(Wrap { trim: true }),
-        sub_layout[2],
-    )
+    render_selected_entry(app, frame, layout[1])
 }
