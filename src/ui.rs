@@ -57,6 +57,23 @@ fn render_feed(app: &mut App, frame: &mut Frame, area: Rect) {
     frame.render_stateful_widget(list, area, &mut app.arxiv_entries.state);
 }
 
+fn render_entry_with_pattern_highlight(
+    title: &str,
+    entry: &str,
+    patterns: &[&str],
+    frame: &mut Frame,
+    area: Rect,
+) {
+    frame.render_widget(
+        Paragraph::new(highlight_patterns(entry, patterns))
+            .block(get_template_block().title(title))
+            .style(MAIN_STYLE)
+            .left_aligned()
+            .wrap(Wrap { trim: true }),
+        area,
+    )
+}
+
 fn render_selected_entry(app: &mut App, frame: &mut Frame, area: Rect) {
     // first split the area
     let sub_layout = Layout::default()
@@ -98,19 +115,15 @@ fn render_selected_entry(app: &mut App, frame: &mut Frame, area: Rect) {
     );
 
     // Implementation of the highlight of keywords:
-    frame.render_widget(
-        Paragraph::new(highlight_patterns(
-            &current_entry.summary,
-            &app.summary_highlight
-                .iter()
-                .map(|s| s.as_str())
-                .collect::<Vec<&str>>()
-                .as_slice(),
-        ))
-        .block(get_template_block().title(" Abstract "))
-        .style(MAIN_STYLE)
-        .left_aligned()
-        .wrap(Wrap { trim: true }),
+    render_entry_with_pattern_highlight(
+        " Abstract ",
+        &current_entry.summary,
+        &app.summary_highlight
+            .iter()
+            .map(|s| s.as_str())
+            .collect::<Vec<&str>>()
+            .as_slice(),
+        frame,
         sub_layout[2],
     )
 }
