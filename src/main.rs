@@ -34,6 +34,12 @@ struct Args {
     summary_highlight: Option<Vec<String>>,
 }
 
+fn option_vec_to_option_slice<'a>(option_vec: &'a Option<Vec<String>>) -> Option<Vec<&'a str>> {
+    let binding = option_vec
+        .as_deref()
+        .map(|v| v.iter().map(String::as_str).collect::<Vec<&str>>());
+    binding
+}
 fn main() -> AppResult<()> {
     // --- Construct the arXiv query with the user args ---
     let args = Args::parse();
@@ -60,10 +66,11 @@ fn main() -> AppResult<()> {
     let state = ListState::default();
 
     // Create an application.
+    let binding = option_vec_to_option_slice(&args.summary_highlight);
     let mut app = App {
         running: true,
         arxiv_entries: ArxivEntryList { items, state },
-        summary_highlight: args.summary_highlight.unwrap_or_default(),
+        summary_highlight: binding.as_deref(),
     };
 
     // Initialize the terminal user interface.

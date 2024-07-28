@@ -1,3 +1,4 @@
+use itertools::izip;
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
@@ -22,6 +23,7 @@ const HIGHLIGHT_STYLE: Style = Style::new()
     .add_modifier(Modifier::ITALIC);
 const SEARCH_HL_STYLE: Style = Style::new().fg(Color::Black).bg(TURQUOISE);
 const MAIN_STYLE: Style = Style::new().fg(TEAL).bg(Color::Black);
+const SHORTCUT_STYLE: Style = Style::new().fg(Color::Blue).bg(Color::Black);
 
 // Create the block:
 fn get_template_block() -> Block<'static> {
@@ -46,7 +48,12 @@ fn render_feed(app: &mut App, frame: &mut Frame, area: Rect) {
 
     // Create a List from all list items and highlight the currently selected one
     let list = List::new(items.clone())
-        .block(get_template_block().title("arXiv Feed"))
+        .block(
+            Block::bordered()
+                .title_style(Style::new().fg(ORANGE))
+                .title_alignment(Alignment::Left)
+                .title("arXiv Feed"),
+        )
         .style(MAIN_STYLE)
         .highlight_style(HIGHLIGHT_STYLE)
         .highlight_symbol("> ")
@@ -60,7 +67,7 @@ fn render_feed(app: &mut App, frame: &mut Frame, area: Rect) {
 fn render_entry_with_pattern_highlight(
     title: &str,
     entry: &str,
-    patterns: &[&str],
+    patterns: Option<&[&str]>,
     frame: &mut Frame,
     area: Rect,
 ) {
@@ -94,38 +101,16 @@ fn render_selected_entry(app: &mut App, frame: &mut Frame, area: Rect) {
         &app.arxiv_entries.items[0]
     };
 
-    // Title
-    frame.render_widget(
-        Paragraph::new(Line::raw(current_entry.title.clone()))
-            .block(get_template_block().title(" Title "))
-            .style(MAIN_STYLE)
-            .left_aligned()
-            .wrap(Wrap { trim: true }),
-        sub_layout[0],
-    );
+    // Zipping all the small info.
+    let titles = vec![" Title ", " Author ", " Abstract "];
+    let authors = format!("{}", current_entry.authors.join(", "));
+    let entries = vec![&current_entry.title, &authors, &current_entry.summary];
+    let patterns_list = vec![app.summary_highlight, None, app.summary_highlight];
+    let areas = vec![sub_layout[0], sub_layout[1], sub_layout[2]];
 
-    // Authors
-    frame.render_widget(
-        Paragraph::new(format!("{}", current_entry.authors.join(", ")))
-            .block(get_template_block().title(" Author "))
-            .style(MAIN_STYLE)
-            .left_aligned()
-            .wrap(Wrap { trim: true }),
-        sub_layout[1],
-    );
-
-    // Implementation of the highlight of keywords:
-    render_entry_with_pattern_highlight(
-        " Abstract ",
-        &current_entry.summary,
-        &app.summary_highlight
-            .iter()
-            .map(|s| s.as_str())
-            .collect::<Vec<&str>>()
-            .as_slice(),
-        frame,
-        sub_layout[2],
-    )
+    for (title, entry, patterns, area) in izip!(titles, entries, patterns_list, areas) {
+        render_entry_with_pattern_highlight(title, entry, patterns, frame, area)
+    }
 }
 
 /// Renders the user interface widgets.
@@ -137,10 +122,24 @@ pub fn render(app: &mut App, frame: &mut Frame) {
 
     // First we create a Layout
     let layout = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Percentage(100), Constraint::Min(1)])
+        .split(frame.size());
+
+    // adding the shortcut
+    frame.render_widget(
+        Paragraph::new("   quit: q  |  up: k/up  | down: j/down | yank url: y")
+            .style(SHORTCUT_STYLE)
+            .left_aligned()
+            .block(Block::new()),
+        layout[1],
+    );
+
+    let layout = Layout::default()
         .direction(Direction::Horizontal)
         .horizontal_margin(2)
         .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
-        .split(frame.size());
+        .split(layout[0]);
 
     // Render the slectable feed
     render_feed(app, frame, layout[0]);
