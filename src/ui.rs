@@ -23,6 +23,7 @@ const HIGHLIGHT_STYLE: Style = Style::new()
     .add_modifier(Modifier::ITALIC);
 const SEARCH_HL_STYLE: Style = Style::new().fg(Color::Black).bg(TURQUOISE);
 const MAIN_STYLE: Style = Style::new().fg(TEAL).bg(Color::Black);
+const SHORTCUT_STYLE: Style = Style::new().fg(Color::Blue).bg(Color::Black);
 
 // Create the block:
 fn get_template_block() -> Block<'static> {
@@ -127,8 +128,8 @@ pub fn render(app: &mut App, frame: &mut Frame) {
 
     // adding the shortcut
     frame.render_widget(
-        Paragraph::new("   quit: q  |  up: k / up  | down: j/down | yank url: y")
-            .style(MAIN_STYLE)
+        Paragraph::new("   quit: q  |  up: k/up  | down: j/down | yank url: y")
+            .style(SHORTCUT_STYLE)
             .left_aligned()
             .block(Block::new()),
         layout[1],
