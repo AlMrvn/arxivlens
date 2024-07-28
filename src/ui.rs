@@ -1,3 +1,4 @@
+use itertools::izip;
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
@@ -46,7 +47,12 @@ fn render_feed(app: &mut App, frame: &mut Frame, area: Rect) {
 
     // Create a List from all list items and highlight the currently selected one
     let list = List::new(items.clone())
-        .block(get_template_block().title("arXiv Feed"))
+        .block(
+            Block::bordered()
+                .title_style(Style::new().fg(ORANGE))
+                .title_alignment(Alignment::Left)
+                .title("arXiv Feed"),
+        )
         .style(MAIN_STYLE)
         .highlight_style(HIGHLIGHT_STYLE)
         .highlight_symbol("> ")
@@ -94,32 +100,16 @@ fn render_selected_entry(app: &mut App, frame: &mut Frame, area: Rect) {
         &app.arxiv_entries.items[0]
     };
 
-    // Title
-    render_entry_with_pattern_highlight(
-        " Title ",
-        &current_entry.title,
-        app.summary_highlight,
-        frame,
-        sub_layout[0],
-    );
+    // Zipping all the small info.
+    let titles = vec![" Title ", " Author ", " Abstract "];
+    let authors = format!("{}", current_entry.authors.join(", "));
+    let entries = vec![&current_entry.title, &authors, &current_entry.summary];
+    let patterns_list = vec![app.summary_highlight, None, app.summary_highlight];
+    let areas = vec![sub_layout[0], sub_layout[1], sub_layout[2]];
 
-    // Authors
-    render_entry_with_pattern_highlight(
-        " Author ",
-        &format!("{}", current_entry.authors.join(", ")),
-        None,
-        frame,
-        sub_layout[1],
-    );
-
-    // Implementation of the highlight of keywords:
-    render_entry_with_pattern_highlight(
-        " Abstract ",
-        &current_entry.summary,
-        app.summary_highlight,
-        frame,
-        sub_layout[2],
-    )
+    for (title, entry, patterns, area) in izip!(titles, entries, patterns_list, areas) {
+        render_entry_with_pattern_highlight(title, entry, patterns, frame, area)
+    }
 }
 
 /// Renders the user interface widgets.
@@ -131,10 +121,24 @@ pub fn render(app: &mut App, frame: &mut Frame) {
 
     // First we create a Layout
     let layout = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Percentage(100), Constraint::Min(1)])
+        .split(frame.size());
+
+    // adding the shortcut
+    frame.render_widget(
+        Paragraph::new("   quit: q  |  up: k / up  | down: j/down | yank url: y")
+            .style(MAIN_STYLE)
+            .left_aligned()
+            .block(Block::new()),
+        layout[1],
+    );
+
+    let layout = Layout::default()
         .direction(Direction::Horizontal)
         .horizontal_margin(2)
         .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
-        .split(frame.size());
+        .split(layout[0]);
 
     // Render the slectable feed
     render_feed(app, frame, layout[0]);
