@@ -28,20 +28,26 @@ fn search_patterns(text: &str, patterns: &[&str]) -> Vec<(usize, usize)> {
 ///
 /// The lifetime of the output is only due to the lifetime of the text, not of the
 /// patterns.
-pub fn highlight_patterns<'a>(text: &'a str, patterns: &[&str]) -> Line<'a> {
+pub fn highlight_patterns<'a>(text: &'a str, patterns: Option<&[&str]>) -> Line<'a> {
+    let patterns = patterns.unwrap_or_default();
     let match_locs = search_patterns(text, patterns);
 
     if match_locs.len() == 0 {
         Line::from(Span::raw(text).style(MAIN_STYLE))
     } else {
         let mut start_chunk: usize = 0;
-        let mut hilighted_spans: Vec<Span> = Vec::new();
+        let mut highlighted_spans: Vec<Span> = Vec::new();
         for (start, end) in match_locs.iter() {
-            hilighted_spans.push(Span::raw(&text[start_chunk..*start]).style(MAIN_STYLE));
-            hilighted_spans.push(Span::raw(&text[*start..*end]).style(SEARCH_HL_STYLE));
+            highlighted_spans.push(Span::raw(&text[start_chunk..*start]).style(MAIN_STYLE));
+            highlighted_spans.push(Span::raw(&text[*start..*end]).style(SEARCH_HL_STYLE));
             start_chunk = *end;
         }
-        Line::from(hilighted_spans)
+
+        // Adding the last bit if necessary:
+        if start_chunk != text.len() {
+            highlighted_spans.push(Span::raw(&text[start_chunk..]).style(MAIN_STYLE));
+        }
+        Line::from(highlighted_spans)
     }
 }
 
@@ -72,7 +78,7 @@ mod tests {
             Span::raw("world").style(SEARCH_HL_STYLE),
         ];
 
-        let result = highlight_patterns(text, patterns);
+        let result = highlight_patterns(text, Some(patterns));
 
         assert_eq!(result.spans, expected_spans);
     }
@@ -84,7 +90,34 @@ mod tests {
 
         let expected_spans = vec![Span::raw(text).style(MAIN_STYLE)];
 
-        let result = highlight_patterns(text, patterns);
+        let result = highlight_patterns(text, Some(patterns));
+
+        assert_eq!(result.spans, expected_spans);
+    }
+
+    #[test]
+    fn test_highlight_patterns_none() {
+        let text = "This is a text without any keywords";
+
+        let expected_spans = vec![Span::raw(text).style(MAIN_STYLE)];
+
+        let result = highlight_patterns(text, None);
+
+        assert_eq!(result.spans, expected_spans);
+    }
+
+    #[test]
+    fn test_highlight_pattern_end_of_text() {
+        let text = "This is a text with some keywords like hello and world";
+        let patterns = &["hello"];
+
+        let expected_spans = vec![
+            Span::raw("This is a text with some keywords like ").style(MAIN_STYLE),
+            Span::raw("hello").style(SEARCH_HL_STYLE),
+            Span::raw(" and world").style(MAIN_STYLE),
+        ];
+
+        let result = highlight_patterns(text, Some(patterns));
 
         assert_eq!(result.spans, expected_spans);
     }
