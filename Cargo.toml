@@ -12,4 +12,7 @@ ratatui = "0.27.0"
 reqwest = { version = "0.12.5", features = ["blocking"] }
 clap = {version = "4.0", features = ["derive"]}
 aho-corasick = "1.1.3"
+serde = { version = "1.0.204", features = ["derive"] }
+xdg = "2.5.2"
+toml = "0.8.16"
 itertools = "0.13.0"

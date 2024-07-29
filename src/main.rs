@@ -1,6 +1,7 @@
 use arxivlens::app::{App, AppResult, ArxivEntryList};
 use arxivlens::arxiv_parsing::parse_arxiv_entries;
 use arxivlens::arxiv_query::{query_arxiv, SearchQuery, SortBy, SortOrder};
+use arxivlens::config;
 use arxivlens::event::{Event, EventHandler};
 use arxivlens::handler::handle_key_events;
 use arxivlens::tui::Tui;
@@ -11,7 +12,6 @@ use ratatui::Terminal;
 use std::io;
 
 /// Default values for the query:
-const DEFAULT_CATEGORY: &str = "quant-ph";
 const DEFAULT_START_INDEX: i32 = 0;
 const DEFAULT_MAX_RESULTS: i32 = 200;
 const DEFAULT_SORT_ORDER: SortOrder = SortOrder::Descending;
@@ -26,12 +26,8 @@ struct Args {
     author: Option<String>,
 
     /// Number of times to greet
-    #[arg(short, long, default_value = DEFAULT_CATEGORY)]
-    category: Option<String>,
-
-    /// String to highlight in the summaries
     #[arg(short, long, default_value = None)]
-    summary_highlight: Option<Vec<String>>,
+    category: Option<String>,
 }
 
 fn option_vec_to_option_slice<'a>(option_vec: &'a Option<Vec<String>>) -> Option<Vec<&'a str>> {
@@ -43,6 +39,8 @@ fn option_vec_to_option_slice<'a>(option_vec: &'a Option<Vec<String>>) -> Option
 fn main() -> AppResult<()> {
     // --- Construct the arXiv query with the user args ---
     let args = Args::parse();
+    let config = config::Config::load();
+
     let mut queries: Vec<SearchQuery> = Vec::new();
 
     if let Some(author) = &args.author {
@@ -51,7 +49,7 @@ fn main() -> AppResult<()> {
     if let Some(category) = &args.category {
         queries.push(SearchQuery::Category(category.to_string()))
     } else {
-        queries.push(SearchQuery::Category(DEFAULT_CATEGORY.to_string()))
+        queries.push(SearchQuery::Category(config.query.category))
     }
 
     // --- Query the arxiv API ---
@@ -66,7 +64,7 @@ fn main() -> AppResult<()> {
     let state = ListState::default();
 
     // Create an application.
-    let binding = option_vec_to_option_slice(&args.summary_highlight);
+    let binding = option_vec_to_option_slice(&config.highlight.keywords);
     let mut app = App {
         running: true,
         arxiv_entries: ArxivEntryList { items, state },
