@@ -16,6 +16,9 @@ pub mod handler;
 /// Searching keyword
 pub mod search_highlight;
 
+/// Handling config
+pub mod config;
+
 /// Arxiv tools
 pub mod arxiv_parsing;
 pub mod arxiv_query;
