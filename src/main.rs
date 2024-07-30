@@ -1,12 +1,11 @@
-use arxivlens::app::{App, AppResult, ArxivEntryList};
-use arxivlens::arxiv::{parse_arxiv_entries, query_arxiv, SearchQuery, SortBy, SortOrder};
+use arxivlens::app::{App, AppResult};
+use arxivlens::arxiv::{get_query_url, ArxivQueryResult, SearchQuery, SortBy, SortOrder};
 use arxivlens::config;
 use arxivlens::event::{Event, EventHandler};
 use arxivlens::handler::handle_key_events;
 use arxivlens::tui::Tui;
 use clap::Parser;
 use ratatui::backend::CrosstermBackend;
-use ratatui::widgets::ListState;
 use ratatui::Terminal;
 use std::io;
 
@@ -46,18 +45,16 @@ fn main() -> AppResult<()> {
     }
 
     // --- Query the arxiv API ---
-    let content = query_arxiv(
+    let query = get_query_url(
         Some(&queries),
         Some(DEFAULT_START_INDEX),
         Some(DEFAULT_MAX_RESULTS),
         Some(DEFAULT_SORT_BY),
         Some(DEFAULT_SORT_ORDER),
     );
-    let items = parse_arxiv_entries(&content?)?;
-    let state = ListState::default();
-
+    let query_result = ArxivQueryResult::from_query(query);
     // Create an application.
-    let mut app = App::new(ArxivEntryList { items, state }, &config.highlight);
+    let mut app = App::new(query_result, &config.highlight);
     // Initialize the terminal user interface.
     let backend = CrosstermBackend::new(io::stderr());
     let terminal = Terminal::new(backend)?;

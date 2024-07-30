@@ -7,9 +7,10 @@ use ratatui::{
 
 use aho_corasick::AhoCorasick;
 
+const ORANGE: Color = Color::Rgb(255, 158, 100);
 const TURQUOISE: Color = Color::Rgb(79, 214, 190);
 const TEAL: Color = Color::Rgb(65, 166, 181);
-const SEARCH_HL_STYLE: Style = Style::new().fg(Color::Black).bg(TURQUOISE);
+const SEARCH_HL_STYLE: Style = Style::new().fg(ORANGE); //.bg(TURQUOISE);
 const MAIN_STYLE: Style = Style::new().fg(TEAL).bg(Color::Black);
 
 fn search_patterns(text: &str, patterns: &[&str]) -> Vec<(usize, usize)> {

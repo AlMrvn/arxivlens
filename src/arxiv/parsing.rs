@@ -56,7 +56,7 @@ fn extract_authors(entry: &Element) -> Result<Vec<String>, Box<dyn Error>> {
 pub fn parse_arxiv_entries(content: &str) -> Result<Vec<ArxivEntry>, Box<dyn Error>> {
     let root: Element = content.parse().unwrap();
     let mut articles: Vec<ArxivEntry> = Vec::new();
-    println!("{:?}", content);
+
     for child in root.children() {
         if child.is("entry", ENTRY_NS) {
             // Extract the main information

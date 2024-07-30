@@ -36,8 +36,8 @@ fn get_template_block() -> Block<'static> {
 fn render_feed(app: &mut App, frame: &mut Frame, area: Rect) {
     // Iterate through all elements in the `items` and use the title
     let items: Vec<ListItem> = app
-        .arxiv_entries
-        .items
+        .query_result
+        .articles
         .iter()
         .enumerate()
         .map(|(_i, entry)| ListItem::from(entry.title.clone()))
@@ -58,7 +58,7 @@ fn render_feed(app: &mut App, frame: &mut Frame, area: Rect) {
         .direction(ListDirection::TopToBottom)
         .highlight_spacing(HighlightSpacing::Always);
 
-    frame.render_stateful_widget(list, area, &mut app.arxiv_entries.state);
+    frame.render_stateful_widget(list, area, &mut app.state);
 }
 
 fn render_entry_with_pattern_highlight(
@@ -98,11 +98,11 @@ fn render_selected_entry(app: &mut App, frame: &mut Frame, area: Rect) {
         .split(area);
 
     // Authors of the manuscript:
-    let current_entry = if let Some(i) = app.arxiv_entries.state.selected() {
-        &app.arxiv_entries.items[i]
+    let current_entry = if let Some(i) = app.state.selected() {
+        &app.query_result.articles[i]
     } else {
         // Should implement a default print here ?
-        &app.arxiv_entries.items[0]
+        &app.query_result.articles[0]
     };
 
     // Zipping all the small info.
