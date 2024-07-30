@@ -57,7 +57,7 @@ fn main() -> AppResult<()> {
     let state = ListState::default();
 
     // Create an application.
-    let mut app = App::new(true, ArxivEntryList { items, state }, &config.highlight);
+    let mut app = App::new(ArxivEntryList { items, state }, &config.highlight);
     // Initialize the terminal user interface.
     let backend = CrosstermBackend::new(io::stderr());
     let terminal = Terminal::new(backend)?;

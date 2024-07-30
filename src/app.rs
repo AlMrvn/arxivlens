@@ -53,13 +53,9 @@ pub struct App<'a> {
 }
 
 impl<'a> App<'a> {
-    pub fn new(
-        running: bool,
-        arxiv_entries: ArxivEntryList,
-        highlight_config: &'a HighlightConfig,
-    ) -> Self {
+    pub fn new(arxiv_entries: ArxivEntryList, highlight_config: &'a HighlightConfig) -> Self {
         Self {
-            running,
+            running: true,
             arxiv_entries,
             highlight_config,
         }

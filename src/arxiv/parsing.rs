@@ -38,10 +38,25 @@ impl ArxivEntry {
     }
 }
 
+/// Helper function to extract the authors
+fn extract_authors(entry: &Element) -> Result<Vec<String>, Box<dyn Error>> {
+    let mut names: Vec<String> = Vec::new();
+
+    // Since there are several child with the same name, we iterate over all of them:
+    for child in entry.children() {
+        if child.is("author", ENTRY_NS) {
+            let name = child.get_child("name", ENTRY_NS).unwrap().text();
+            names.push(name)
+        }
+    }
+
+    Ok(names)
+}
+
 pub fn parse_arxiv_entries(content: &str) -> Result<Vec<ArxivEntry>, Box<dyn Error>> {
     let root: Element = content.parse().unwrap();
     let mut articles: Vec<ArxivEntry> = Vec::new();
-
+    println!("{:?}", content);
     for child in root.children() {
         if child.is("entry", ENTRY_NS) {
             // Extract the main information
@@ -57,12 +72,12 @@ pub fn parse_arxiv_entries(content: &str) -> Result<Vec<ArxivEntry>, Box<dyn Err
             // Only add the new entry, ie published == updated
             match updated.as_str() == published.as_str() {
                 true => articles.push(ArxivEntry {
-                    title,
-                    authors,
-                    summary,
-                    id,
-                    updated,
-                    published,
+                    title: title.replace("\n ", "").to_owned(), // arxiv has this formatting
+                    authors: authors.to_owned(),
+                    summary: summary.replace("\n", " ").to_owned(),
+                    id: id.to_owned(),
+                    updated: updated.to_owned(),
+                    published: published.to_owned(),
                 }),
                 _ => (),
             }
@@ -73,19 +88,68 @@ pub fn parse_arxiv_entries(content: &str) -> Result<Vec<ArxivEntry>, Box<dyn Err
     Ok(articles)
 }
 
-/// Helper function to extract the authors
-fn extract_authors(entry: &Element) -> Result<Vec<String>, Box<dyn Error>> {
-    let mut names: Vec<String> = Vec::new();
+/// Storing the result of the arxiv query
+#[derive(Debug, Default, PartialEq)]
+pub struct ArxivQueryResult {
+    pub updated: String,
+    pub articles: Vec<ArxivEntry>,
+}
 
-    // Since there are several child with the same name, we iterate over all of them:
-    for child in entry.children() {
-        if child.is("author", ENTRY_NS) {
-            let name = child.get_child("name", ENTRY_NS).unwrap().text();
-            names.push(name)
+impl ArxivQueryResult {
+    pub fn from_xml_content(content: &str) -> Self {
+        let root: Element = content.parse().unwrap();
+
+        // Find the updated
+        let query_update = root.get_child("updated", ENTRY_NS).unwrap().text();
+
+        let mut articles: Vec<ArxivEntry> = Vec::new();
+
+        for child in root.children() {
+            if child.is("entry", ENTRY_NS) {
+                // Extract the main information
+                let title = child.get_child("title", ENTRY_NS).unwrap().text();
+                let id = child.get_child("id", ENTRY_NS).unwrap().text();
+                let summary = child.get_child("summary", ENTRY_NS).unwrap().text();
+                let updated = child.get_child("updated", ENTRY_NS).unwrap().text();
+                let published = child.get_child("published", ENTRY_NS).unwrap().text();
+
+                // Extract the authors which have one more depth.
+                let authors = match extract_authors(child) {
+                    Ok(auths) => auths,
+                    Err(_) => vec!["Error while parsing authors names".to_string()],
+                };
+
+                // Only add the new entry, ie published == updated
+                match updated.as_str() == published.as_str() {
+                    true => articles.push(ArxivEntry {
+                        title: title.to_owned(),
+                        authors: authors.to_owned(),
+                        summary: summary.to_owned(),
+                        id: id.to_owned(),
+                        updated: updated.to_owned(),
+                        published: published.to_owned(),
+                    }),
+                    _ => (),
+                }
+            }
+        }
+        let articles = articles;
+        Self {
+            updated: query_update,
+            articles,
         }
     }
-
-    Ok(names)
+    pub fn from_query(query: String) -> Self {
+        let query_response = match reqwest::blocking::get(query) {
+            Ok(content) => content,
+            Err(error) => panic!("Problem while querying arXiv: {error:?}"),
+        };
+        let xml_content = query_response.text().unwrap_or_else(|e| {
+            eprintln!("Request failed: {}", e);
+            std::process::exit(1);
+        });
+        ArxivQueryResult::from_xml_content(&xml_content)
+    }
 }
 
 #[cfg(test)]
@@ -156,31 +220,33 @@ mod tests {
               </entry>
             </feed>  "#
         .to_string();
+        let expected_result = ArxivQueryResult {
+            updated: "2024-07-09T20:00:00Z".to_string(),
+            articles: vec![
+                ArxivEntry {
+                    title: String::from("Sample Title 1"),
+                    authors: [String::from("Author One"), String::from("Author Two")].to_vec(),
+                    summary: String::from(
+                        "This is a summary for the first fake entry used for testing purposes.",
+                    ),
+                    id: String::from("http://arxiv.org/abs/9876.54321"),
+                    updated: String::from("2023-12-31T23:59:59Z"),
+                    published: String::from("2023-12-31T23:59:59Z"),
+                },
+                ArxivEntry {
+                    title: String::from("Sample Title 2"),
+                    authors: [String::from("Author Three")].to_vec(),
+                    summary: String::from("This is a sample summary for the second entry."),
+                    id: String::from("http://arxiv.org/abs/1212.34567"),
+                    updated: String::from("2024-01-01T00:00:00Z"),
+                    published: String::from("2024-01-01T00:00:00Z"),
+                },
+            ],
+        };
 
-        let expected_entries = vec![
-            ArxivEntry {
-                title: String::from("Sample Title 1"),
-                authors: [String::from("Author One"), String::from("Author Two")].to_vec(),
-                summary: String::from(
-                    "This is a summary for the first fake entry used for testing purposes.",
-                ),
-                id: String::from("http://arxiv.org/abs/9876.54321"),
-                updated: String::from("2023-12-31T23:59:59Z"),
-                published: String::from("2023-12-31T23:59:59Z"),
-            },
-            ArxivEntry {
-                title: String::from("Sample Title 2"),
-                authors: [String::from("Author Three")].to_vec(),
-                summary: String::from("This is a sample summary for the second entry."),
-                id: String::from("http://arxiv.org/abs/1212.34567"),
-                updated: String::from("2024-01-01T00:00:00Z"),
-                published: String::from("2024-01-01T00:00:00Z"),
-            },
-        ];
+        let actual_result = ArxivQueryResult::from_xml_content(&xml_content);
 
-        let parsed_entries = parse_arxiv_entries(&xml_content)?;
-
-        assert_eq!(expected_entries, parsed_entries);
+        assert_eq!(expected_result, actual_result);
 
         Ok(())
     }
