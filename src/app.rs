@@ -1,5 +1,5 @@
-use crate::arxiv_parsing::{parse_arxiv_entries, ArxivEntry};
-use crate::arxiv_query::{query_arxiv, SortBy, SortOrder};
+use crate::arxiv::{parse_arxiv_entries, query_arxiv, ArxivEntry, SortBy, SortOrder};
+use crate::config::HighlightConfig;
 use arboard::Clipboard;
 use ratatui::widgets::ListState;
 use std::error::Error;
@@ -48,14 +48,24 @@ pub struct App<'a> {
     pub running: bool,
     /// Arxiv entry list:
     pub arxiv_entries: ArxivEntryList,
-    /// Word to highlight in the summary
-    pub summary_highlight: Option<&'a [&'a str]>,
+    /// Configuration for the hilighting
+    pub highlight_config: &'a HighlightConfig,
 }
 
+impl<'a> App<'a> {
+    pub fn new(
+        running: bool,
+        arxiv_entries: ArxivEntryList,
+        highlight_config: &'a HighlightConfig,
+    ) -> Self {
+        Self {
+            running,
+            arxiv_entries,
+            highlight_config,
+        }
+    }
+}
 impl App<'_> {
-    /// Handles the tick event of the terminal.
-    pub fn tick(&self) {}
-
     /// Set running to false to quit the application.
     pub fn quit(&mut self) {
         self.running = false;

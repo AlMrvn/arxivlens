@@ -20,5 +20,4 @@ pub mod search_highlight;
 pub mod config;
 
 /// Arxiv tools
-pub mod arxiv_parsing;
-pub mod arxiv_query;
+pub mod arxiv;

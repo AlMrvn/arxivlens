@@ -2,7 +2,6 @@ use itertools::izip;
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
-    text::Line,
     widgets::{
         Block, BorderType, Borders, HighlightSpacing, List, ListDirection, ListItem, Padding,
         Paragraph, Wrap,
@@ -15,13 +14,11 @@ use crate::search_highlight::highlight_patterns;
 
 // Using the Tokyonight color palette. See https://lospec.com/palette-list/tokyo-night.
 const ORANGE: Color = Color::Rgb(255, 158, 100);
-const TURQUOISE: Color = Color::Rgb(79, 214, 190);
 const TEAL: Color = Color::Rgb(65, 166, 181);
 const HIGHLIGHT_STYLE: Style = Style::new()
     .fg(TEAL)
     .bg(Color::White)
     .add_modifier(Modifier::ITALIC);
-const SEARCH_HL_STYLE: Style = Style::new().fg(Color::Black).bg(TURQUOISE);
 const MAIN_STYLE: Style = Style::new().fg(TEAL).bg(Color::Black);
 const SHORTCUT_STYLE: Style = Style::new().fg(Color::Blue).bg(Color::Black);
 
@@ -81,6 +78,13 @@ fn render_entry_with_pattern_highlight(
     )
 }
 
+fn option_vec_to_option_slice<'a>(option_vec: &'a Option<Vec<String>>) -> Option<Vec<&'a str>> {
+    let binding = option_vec
+        .as_deref()
+        .map(|v| v.iter().map(String::as_str).collect::<Vec<&str>>());
+    binding
+}
+
 fn render_selected_entry(app: &mut App, frame: &mut Frame, area: Rect) {
     // first split the area
     let sub_layout = Layout::default()
@@ -105,11 +109,16 @@ fn render_selected_entry(app: &mut App, frame: &mut Frame, area: Rect) {
     let titles = vec![" Title ", " Author ", " Abstract "];
     let authors = format!("{}", current_entry.authors.join(", "));
     let entries = vec![&current_entry.title, &authors, &current_entry.summary];
-    let patterns_list = vec![app.summary_highlight, None, app.summary_highlight];
+    let patterns_list = vec![
+        &app.highlight_config.keywords,
+        &app.highlight_config.authors,
+        &app.highlight_config.keywords,
+    ];
     let areas = vec![sub_layout[0], sub_layout[1], sub_layout[2]];
 
     for (title, entry, patterns, area) in izip!(titles, entries, patterns_list, areas) {
-        render_entry_with_pattern_highlight(title, entry, patterns, frame, area)
+        let patterns = option_vec_to_option_slice(patterns);
+        render_entry_with_pattern_highlight(title, entry, patterns.as_deref(), frame, area)
     }
 }
 
@@ -128,7 +137,7 @@ pub fn render(app: &mut App, frame: &mut Frame) {
 
     // adding the shortcut
     frame.render_widget(
-        Paragraph::new("   quit: q  |  up: k/up  | down: j/down | yank url: y")
+        Paragraph::new("   quit: q  |  up: k  | down: j | yank url: y")
             .style(SHORTCUT_STYLE)
             .left_aligned()
             .block(Block::new()),

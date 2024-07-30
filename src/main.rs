@@ -1,6 +1,5 @@
 use arxivlens::app::{App, AppResult, ArxivEntryList};
-use arxivlens::arxiv_parsing::parse_arxiv_entries;
-use arxivlens::arxiv_query::{query_arxiv, SearchQuery, SortBy, SortOrder};
+use arxivlens::arxiv::{parse_arxiv_entries, query_arxiv, SearchQuery, SortBy, SortOrder};
 use arxivlens::config;
 use arxivlens::event::{Event, EventHandler};
 use arxivlens::handler::handle_key_events;
@@ -30,12 +29,6 @@ struct Args {
     category: Option<String>,
 }
 
-fn option_vec_to_option_slice<'a>(option_vec: &'a Option<Vec<String>>) -> Option<Vec<&'a str>> {
-    let binding = option_vec
-        .as_deref()
-        .map(|v| v.iter().map(String::as_str).collect::<Vec<&str>>());
-    binding
-}
 fn main() -> AppResult<()> {
     // --- Construct the arXiv query with the user args ---
     let args = Args::parse();
@@ -64,17 +57,11 @@ fn main() -> AppResult<()> {
     let state = ListState::default();
 
     // Create an application.
-    let binding = option_vec_to_option_slice(&config.highlight.keywords);
-    let mut app = App {
-        running: true,
-        arxiv_entries: ArxivEntryList { items, state },
-        summary_highlight: binding.as_deref(),
-    };
-
+    let mut app = App::new(true, ArxivEntryList { items, state }, &config.highlight);
     // Initialize the terminal user interface.
     let backend = CrosstermBackend::new(io::stderr());
     let terminal = Terminal::new(backend)?;
-    let events = EventHandler::new(250);
+    let events = EventHandler::new();
     let mut tui = Tui::new(terminal, events);
     tui.init()?;
 
@@ -84,7 +71,6 @@ fn main() -> AppResult<()> {
         tui.draw(&mut app)?;
         // Handle events.
         match tui.events.next()? {
-            Event::Tick => app.tick(),
             Event::Key(key_event) => handle_key_events(key_event, &mut app)?,
             Event::Mouse(_) => {}
             Event::Resize(_, _) => {}
