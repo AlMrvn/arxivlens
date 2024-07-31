@@ -22,6 +22,13 @@ const HIGHLIGHT_STYLE: Style = Style::new()
 const MAIN_STYLE: Style = Style::new().fg(TEAL).bg(Color::Black);
 const SHORTCUT_STYLE: Style = Style::new().fg(Color::Blue).bg(Color::Black);
 
+fn option_vec_to_option_slice<'a>(option_vec: &'a Option<Vec<String>>) -> Option<Vec<&'a str>> {
+    let binding = option_vec
+        .as_deref()
+        .map(|v| v.iter().map(String::as_str).collect::<Vec<&str>>());
+    binding
+}
+
 // Create the block:
 fn get_template_block() -> Block<'static> {
     Block::new()
@@ -36,8 +43,8 @@ fn get_template_block() -> Block<'static> {
 fn render_feed(app: &mut App, frame: &mut Frame, area: Rect) {
     // Iterate through all elements in the `items` and use the title
     let items: Vec<ListItem> = app
-        .arxiv_entries
-        .items
+        .query_result
+        .articles
         .iter()
         .enumerate()
         .map(|(_i, entry)| ListItem::from(entry.title.clone()))
@@ -58,7 +65,7 @@ fn render_feed(app: &mut App, frame: &mut Frame, area: Rect) {
         .direction(ListDirection::TopToBottom)
         .highlight_spacing(HighlightSpacing::Always);
 
-    frame.render_stateful_widget(list, area, &mut app.arxiv_entries.state);
+    frame.render_stateful_widget(list, area, &mut app.state);
 }
 
 fn render_entry_with_pattern_highlight(
@@ -78,13 +85,6 @@ fn render_entry_with_pattern_highlight(
     )
 }
 
-fn option_vec_to_option_slice<'a>(option_vec: &'a Option<Vec<String>>) -> Option<Vec<&'a str>> {
-    let binding = option_vec
-        .as_deref()
-        .map(|v| v.iter().map(String::as_str).collect::<Vec<&str>>());
-    binding
-}
-
 fn render_selected_entry(app: &mut App, frame: &mut Frame, area: Rect) {
     // first split the area
     let sub_layout = Layout::default()
@@ -98,11 +98,11 @@ fn render_selected_entry(app: &mut App, frame: &mut Frame, area: Rect) {
         .split(area);
 
     // Authors of the manuscript:
-    let current_entry = if let Some(i) = app.arxiv_entries.state.selected() {
-        &app.arxiv_entries.items[i]
+    let current_entry = if let Some(i) = app.state.selected() {
+        &app.query_result.articles[i]
     } else {
         // Should implement a default print here ?
-        &app.arxiv_entries.items[0]
+        &app.query_result.articles[0]
     };
 
     // Zipping all the small info.

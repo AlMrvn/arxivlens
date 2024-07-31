@@ -167,7 +167,7 @@ impl Display for SortOrder {
 /// a valid and complete query string.
 ///
 /// If no search parameters are provided, an empty string is returned.
-fn get_search_query(
+pub fn get_search_query(
     search_queries: Option<&[SearchQuery]>,
     start_index: Option<i32>,
     max_results: Option<i32>,
@@ -225,7 +225,7 @@ fn get_search_query(
 ///
 /// By combining these steps, this function creates a complete and valid URL ready to be used
 /// for fetching data from the arXiv archive.
-fn get_query_url(
+pub fn get_query_url(
     search_queries: Option<&[SearchQuery]>,
     start_index: Option<i32>,
     max_results: Option<i32>,
