@@ -6,6 +6,8 @@
 use minidom::Element;
 use std::error::Error;
 
+use crate::search_highlight::search_patterns;
+
 const ENTRY_NS: &'static str = "http://www.w3.org/2005/Atom";
 
 #[derive(Debug, Default, PartialEq)]
@@ -34,6 +36,19 @@ impl ArxivEntry {
             id,
             updated,
             published,
+        }
+    }
+
+    pub fn all_authors(self) -> String {
+        format!("{}", self.authors.join(", "))
+    }
+
+    pub fn contains_author(self, author_patterns: Option<&[&str]>) -> bool {
+        if let Some(patterns) = author_patterns {
+            let matches = search_patterns(&self.all_authors(), patterns);
+            matches.len() > 0
+        } else {
+            false
         }
     }
 }

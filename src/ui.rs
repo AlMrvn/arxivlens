@@ -22,6 +22,13 @@ const HIGHLIGHT_STYLE: Style = Style::new()
 const MAIN_STYLE: Style = Style::new().fg(TEAL).bg(Color::Black);
 const SHORTCUT_STYLE: Style = Style::new().fg(Color::Blue).bg(Color::Black);
 
+fn option_vec_to_option_slice<'a>(option_vec: &'a Option<Vec<String>>) -> Option<Vec<&'a str>> {
+    let binding = option_vec
+        .as_deref()
+        .map(|v| v.iter().map(String::as_str).collect::<Vec<&str>>());
+    binding
+}
+
 // Create the block:
 fn get_template_block() -> Block<'static> {
     Block::new()
@@ -76,13 +83,6 @@ fn render_entry_with_pattern_highlight(
             .wrap(Wrap { trim: true }),
         area,
     )
-}
-
-fn option_vec_to_option_slice<'a>(option_vec: &'a Option<Vec<String>>) -> Option<Vec<&'a str>> {
-    let binding = option_vec
-        .as_deref()
-        .map(|v| v.iter().map(String::as_str).collect::<Vec<&str>>());
-    binding
 }
 
 fn render_selected_entry(app: &mut App, frame: &mut Frame, area: Rect) {
