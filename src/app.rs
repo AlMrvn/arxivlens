@@ -10,7 +10,7 @@ use ratatui::{
     Frame,
 };
 
-// Using the Tokyonight color palette. See https://lospec.com/palette-list/tokyo-night.
+/// Application result type.
 pub type AppResult<T> = std::result::Result<T, Box<dyn Error>>;
 
 /// Application.

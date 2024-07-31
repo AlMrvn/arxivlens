@@ -60,6 +60,7 @@ fn main() -> AppResult<()> {
     let query_result = ArxivQueryResult::from_query(query);
     // Create an application.
     let mut app = App::new(&query_result, &config.highlight, theme);
+  
     // Initialize the terminal user interface.
     let backend = CrosstermBackend::new(io::stderr());
     let terminal = Terminal::new(backend)?;
