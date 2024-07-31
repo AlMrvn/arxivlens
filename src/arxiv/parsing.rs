@@ -39,11 +39,11 @@ impl ArxivEntry {
         }
     }
 
-    pub fn all_authors(self) -> String {
+    pub fn all_authors(&self) -> String {
         format!("{}", self.authors.join(", "))
     }
 
-    pub fn contains_author(self, author_patterns: Option<&[&str]>) -> bool {
+    pub fn contains_author(&self, author_patterns: Option<&[&str]>) -> bool {
         if let Some(patterns) = author_patterns {
             let matches = search_patterns(&self.all_authors(), patterns);
             matches.len() > 0
