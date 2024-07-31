@@ -16,6 +16,7 @@ pub struct ArticleDetails<'a> {
     title: Line<'a>,
     authors: Line<'a>,
     summary: Line<'a>,
+    updated: Line<'a>,
 }
 
 impl<'a> ArticleDetails<'a> {
@@ -24,12 +25,9 @@ impl<'a> ArticleDetails<'a> {
         let keyword_patterns = option_vec_to_option_slice(&highlight_config.keywords);
         Self {
             title: highlight_patterns(&entry.title, keyword_patterns.as_deref(), theme),
-            authors: highlight_patterns(
-                entry.get_all_authors(),
-                author_patterns.as_deref(),
-                theme,
-            ),
+            authors: highlight_patterns(entry.get_all_authors(), author_patterns.as_deref(), theme),
             summary: highlight_patterns(&entry.summary, keyword_patterns.as_deref(), theme),
+            updated: Line::raw(&entry.updated).style(theme.main),
         }
     }
 
@@ -41,12 +39,13 @@ impl<'a> ArticleDetails<'a> {
                 Constraint::Length(4), // Title
                 Constraint::Length(6), // Authors
                 Constraint::Min(10),   // Abstract/summary
+                Constraint::Length(2), // Last update
             ])
             .split(area);
 
-        let titles_sec = vec![" Title ", " Author ", " Abstract "];
-        let areas = vec![sub_layout[0], sub_layout[1], sub_layout[2]];
-        let items = vec![&self.title, &self.authors, &self.summary];
+        let titles_sec = vec![" Title ", " Author ", " Abstract ", "Updated"];
+        let areas = vec![sub_layout[0], sub_layout[1], sub_layout[2], sub_layout[3]];
+        let items = vec![&self.title, &self.authors, &self.summary, &self.updated];
 
         for (title, entry, area) in izip!(titles_sec, items, areas) {
             frame.render_widget(
