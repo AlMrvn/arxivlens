@@ -4,6 +4,7 @@ use arxivlens::config;
 use arxivlens::event::{Event, EventHandler};
 use arxivlens::handler::handle_key_events;
 use arxivlens::tui::Tui;
+use arxivlens::ui::Theme;
 use clap::Parser;
 use ratatui::backend::CrosstermBackend;
 use ratatui::Terminal;
@@ -33,6 +34,10 @@ fn main() -> AppResult<()> {
     let args = Args::parse();
     let config = config::Config::load();
 
+    // TODO: Get the them out of the config:
+    let theme = Theme::default();
+
+    //
     let mut queries: Vec<SearchQuery> = Vec::new();
 
     if let Some(author) = &args.author {
@@ -54,7 +59,8 @@ fn main() -> AppResult<()> {
     );
     let query_result = ArxivQueryResult::from_query(query);
     // Create an application.
-    let mut app = App::new(query_result, &config.highlight);
+    let mut app = App::new(&query_result, &config.highlight, theme);
+  
     // Initialize the terminal user interface.
     let backend = CrosstermBackend::new(io::stderr());
     let terminal = Terminal::new(backend)?;

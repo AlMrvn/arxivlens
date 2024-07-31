@@ -28,6 +28,12 @@ pub struct EventHandler {
     handler: thread::JoinHandle<()>,
 }
 
+impl Default for EventHandler {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl EventHandler {
     /// Constructs a new instance of [`EventHandler`].
     pub fn new() -> Self {

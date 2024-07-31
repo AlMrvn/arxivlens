@@ -22,7 +22,7 @@ use std::collections::BTreeMap;
 use std::error::Error;
 use std::fmt::Display;
 
-const ARXIV_QUERY_BASE_URL: &'static str = "http://export.arxiv.org/api/query?";
+const ARXIV_QUERY_BASE_URL: &str = "http://export.arxiv.org/api/query?";
 
 // --- Construct the search query ---
 
@@ -98,7 +98,7 @@ fn group_and_join_queries(search_queries: &[SearchQuery]) -> String {
     for query in search_queries {
         grouped_queries
             .entry(query.category())
-            .or_insert(Vec::new())
+            .or_default()
             .push(format!("{}", query));
     }
 
@@ -198,10 +198,10 @@ pub fn get_search_query(
         query.push(format!("sortOrder={}", sort_order))
     }
 
-    if query.len() == 0 {
+    if query.is_empty() {
         String::new()
     } else {
-        format!("{}", query.join("&"))
+        query.join("&").to_string()
     }
 }
 
