@@ -1,25 +1,16 @@
 use crate::arxiv::ArxivQueryResult;
 use crate::config::HighlightConfig;
+use crate::ui::{ArticleDetails, ArticleFeed, Theme};
 use arboard::Clipboard;
-use ratatui::widgets::{List, ListState};
 use std::error::Error;
 
 use ratatui::{
-    layout::Alignment,
-    style::{Color, Modifier, Style},
-    widgets::{Block, HighlightSpacing, ListDirection, ListItem},
+    layout::{Constraint, Direction, Layout},
+    widgets::{Block, Paragraph},
+    Frame,
 };
 
 // Using the Tokyonight color palette. See https://lospec.com/palette-list/tokyo-night.
-const ORANGE: Color = Color::Rgb(255, 158, 100);
-const TEAL: Color = Color::Rgb(65, 166, 181);
-const HIGHLIGHT_STYLE: Style = Style::new()
-    .fg(TEAL)
-    .bg(Color::White)
-    .add_modifier(Modifier::ITALIC);
-const MAIN_STYLE: Style = Style::new().fg(TEAL).bg(Color::Black);
-
-/// Application result type.
 pub type AppResult<T> = std::result::Result<T, Box<dyn Error>>;
 
 /// Application.
@@ -28,13 +19,13 @@ pub struct App<'a> {
     /// Is the application running?
     pub running: bool,
     /// Arxiv entry list:
-    pub query_result: ArxivQueryResult,
-    /// State selectec
-    pub state: ListState,
+    pub query_result: &'a ArxivQueryResult,
     /// Configuration for the hilighting
     pub highlight_config: &'a HighlightConfig,
-    ///
-    pub listentry: List<'a>,
+    /// The title of articles feeds
+    pub article_feed: ArticleFeed<'a>,
+    /// Theme
+    pub theme: Theme,
 }
 
 fn option_vec_to_option_slice<'a>(option_vec: &'a Option<Vec<String>>) -> Option<Vec<&'a str>> {
@@ -45,44 +36,21 @@ fn option_vec_to_option_slice<'a>(option_vec: &'a Option<Vec<String>>) -> Option
 }
 
 impl<'a> App<'a> {
-    pub fn new(query_result: ArxivQueryResult, highlight_config: &'a HighlightConfig) -> Self {
+    pub fn new(
+        query_result: &'a ArxivQueryResult,
+        highlight_config: &'a HighlightConfig,
+        theme: Theme,
+    ) -> Self {
+        // Constructing the highlighed feed of titles.
         let patterns = option_vec_to_option_slice(&highlight_config.authors);
-        let items: Vec<ListItem> = query_result
-            .articles
-            .iter()
-            .enumerate()
-            .map(|(_i, entry)| {
-                ListItem::from(entry.title.clone()).style(
-                    if entry.contains_author(patterns.as_deref()) {
-                        Style::new().fg(ORANGE)
-                    } else {
-                        MAIN_STYLE
-                    },
-                )
-            })
-            .collect();
-
-        // Create a List from all list items and highlight the currently selected one
-        let list = List::new(items.clone())
-            .block(
-                Block::bordered()
-                    .title_style(Style::new().fg(ORANGE))
-                    .title_alignment(Alignment::Left)
-                    .title("arXiv Feed"),
-            )
-            .style(MAIN_STYLE)
-            .highlight_style(HIGHLIGHT_STYLE)
-            .highlight_symbol("> ")
-            .repeat_highlight_symbol(true)
-            .direction(ListDirection::TopToBottom)
-            .highlight_spacing(HighlightSpacing::Always);
+        let article_feed = ArticleFeed::new(query_result, patterns.as_deref(), &theme);
 
         Self {
             running: true,
             query_result,
-            state: ListState::default(),
             highlight_config,
-            listentry: list,
+            article_feed,
+            theme,
         }
     }
 }
@@ -95,28 +63,28 @@ impl App<'_> {
 
     /// No selection
     pub fn select_none(&mut self) {
-        self.state.select(None)
+        self.article_feed.state.select(None)
     }
 
     /// Select next item:
     pub fn select_next(&mut self) {
-        self.state.select_next();
+        self.article_feed.state.select_next();
     }
     pub fn select_previous(&mut self) {
-        self.state.select_previous();
+        self.article_feed.state.select_previous();
     }
 
     pub fn select_first(&mut self) {
-        self.state.select_first();
+        self.article_feed.state.select_first();
     }
 
     pub fn select_last(&mut self) {
-        self.state.select_last();
+        self.article_feed.state.select_last();
     }
 
     pub fn yank_id(&mut self) {
         // The abstract of the manuscript
-        let id = if let Some(i) = self.state.selected() {
+        let id = if let Some(i) = self.article_feed.state.selected() {
             self.query_result.articles[i].id.clone()
         } else {
             "Nothing selected".to_string()
@@ -125,5 +93,43 @@ impl App<'_> {
         // Set the clipboard
         let mut clipboard = Clipboard::new().unwrap();
         clipboard.set_text(id).unwrap();
+    }
+
+    /// Render the app:
+    pub fn render(&mut self, frame: &mut Frame) {
+        // First we create a Layout
+        let layout = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Percentage(100), Constraint::Min(1)])
+            .split(frame.size());
+
+        // adding the shortcut
+        frame.render_widget(
+            Paragraph::new("   quit: q  |  up: k  | down: j | yank url: y")
+                .style(self.theme.shortcut)
+                .left_aligned()
+                .block(Block::new()),
+            layout[1],
+        );
+
+        let layout = Layout::default()
+            .direction(Direction::Horizontal)
+            .horizontal_margin(2)
+            .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
+            .split(layout[0]);
+
+        // Render the slectable feed
+        self.article_feed.render(frame, layout[0]);
+
+        // Render the detail of the article selected:
+        let current_entry = if let Some(i) = self.article_feed.state.selected() {
+            &self.query_result.articles[i]
+        } else {
+            // Should implement a default print here ?
+            &self.query_result.articles[0]
+        };
+
+        let article_view = ArticleDetails::new(current_entry, self.highlight_config, &self.theme);
+        article_view.render(frame, layout[1], &self.theme)
     }
 }

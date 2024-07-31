@@ -18,6 +18,7 @@ pub struct ArxivEntry {
     pub id: String,
     pub updated: String,
     pub published: String,
+    all_authors: String,
 }
 
 impl ArxivEntry {
@@ -29,6 +30,7 @@ impl ArxivEntry {
         updated: String,
         published: String,
     ) -> Self {
+        let all_authors = authors.join(", ");
         Self {
             title,
             authors,
@@ -36,16 +38,17 @@ impl ArxivEntry {
             id,
             updated,
             published,
+            all_authors,
         }
     }
 
-    pub fn all_authors(&self) -> String {
-        format!("{}", self.authors.join(", "))
+    pub fn get_all_authors(&self) -> &str {
+        &self.all_authors
     }
 
     pub fn contains_author(&self, author_patterns: Option<&[&str]>) -> bool {
         if let Some(patterns) = author_patterns {
-            let matches = search_patterns(&self.all_authors(), patterns);
+            let matches = search_patterns(&self.all_authors, patterns);
             matches.len() > 0
         } else {
             false
@@ -101,14 +104,14 @@ impl ArxivQueryResult {
 
                 // Only add the new entry, ie published == updated
                 match updated.as_str() == published.as_str() {
-                    true => articles.push(ArxivEntry {
-                        title: title.replace("\n ", "").to_owned(), // arxiv has this formatting
-                        authors: authors.to_owned(),
-                        summary: summary.replace("\n", " ").to_owned(),
-                        id: id.to_owned(),
-                        updated: updated.to_owned(),
-                        published: published.to_owned(),
-                    }),
+                    true => articles.push(ArxivEntry::new(
+                        title.replace("\n ", "").to_owned(), // arxiv has this formatting
+                        authors.to_owned(),
+                        summary.replace("\n", " ").to_owned(),
+                        id.to_owned(),
+                        updated.to_owned(),
+                        published.to_owned(),
+                    )),
                     _ => (),
                 }
             }
@@ -212,6 +215,7 @@ mod tests {
                     id: String::from("http://arxiv.org/abs/9876.54321"),
                     updated: String::from("2023-12-31T23:59:59Z"),
                     published: String::from("2023-12-31T23:59:59Z"),
+                    all_authors: String::from("Author One, Author Two"),
                 },
                 ArxivEntry {
                     title: String::from("Sample Title 2"),
@@ -220,6 +224,7 @@ mod tests {
                     id: String::from("http://arxiv.org/abs/1212.34567"),
                     updated: String::from("2024-01-01T00:00:00Z"),
                     published: String::from("2024-01-01T00:00:00Z"),
+                    all_authors: String::from("Author Three"),
                 },
             ],
         };
