@@ -41,31 +41,7 @@ fn get_template_block() -> Block<'static> {
 
 /// Renders the arXiv feed with a selection
 fn render_feed(app: &mut App, frame: &mut Frame, area: Rect) {
-    // Iterate through all elements in the `items` and use the title
-    let items: Vec<ListItem> = app
-        .query_result
-        .articles
-        .iter()
-        .enumerate()
-        .map(|(_i, entry)| ListItem::from(entry.title.clone()))
-        .collect();
-
-    // Create a List from all list items and highlight the currently selected one
-    let list = List::new(items.clone())
-        .block(
-            Block::bordered()
-                .title_style(Style::new().fg(ORANGE))
-                .title_alignment(Alignment::Left)
-                .title("arXiv Feed"),
-        )
-        .style(MAIN_STYLE)
-        .highlight_style(HIGHLIGHT_STYLE)
-        .highlight_symbol("> ")
-        .repeat_highlight_symbol(true)
-        .direction(ListDirection::TopToBottom)
-        .highlight_spacing(HighlightSpacing::Always);
-
-    frame.render_stateful_widget(list, area, &mut app.state);
+    frame.render_stateful_widget(&app.listentry, area, &mut app.state);
 }
 
 fn render_entry_with_pattern_highlight(
