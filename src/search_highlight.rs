@@ -26,7 +26,7 @@ pub fn highlight_patterns<'a>(text: &'a str, patterns: Option<&[&str]>, theme: &
     let patterns = patterns.unwrap_or_default();
     let match_locs = search_patterns(text, patterns);
 
-    if match_locs.len() == 0 {
+    if match_locs.is_empty() {
         Line::from(Span::raw(text).style(theme.main))
     } else {
         let mut start_chunk: usize = 0;

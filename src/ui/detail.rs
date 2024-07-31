@@ -23,13 +23,13 @@ impl<'a> ArticleDetails<'a> {
         let author_patterns = option_vec_to_option_slice(&highlight_config.authors);
         let keyword_patterns = option_vec_to_option_slice(&highlight_config.keywords);
         Self {
-            title: highlight_patterns(&entry.title, keyword_patterns.as_deref(), &theme),
+            title: highlight_patterns(&entry.title, keyword_patterns.as_deref(), theme),
             authors: highlight_patterns(
-                &entry.get_all_authors(),
+                entry.get_all_authors(),
                 author_patterns.as_deref(),
-                &theme,
+                theme,
             ),
-            summary: highlight_patterns(&entry.summary, keyword_patterns.as_deref(), &theme),
+            summary: highlight_patterns(&entry.summary, keyword_patterns.as_deref(), theme),
         }
     }
 

@@ -22,8 +22,7 @@ impl<'a> ArticleFeed<'a> {
         let items: Vec<ListItem> = query_result
             .articles
             .iter()
-            .enumerate()
-            .map(|(_i, entry)| {
+            .map(|entry| {
                 ListItem::from(entry.title.clone()).style(
                     if entry.contains_author(highlight_authors) {
                         theme.title

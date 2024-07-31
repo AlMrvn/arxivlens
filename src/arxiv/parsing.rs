@@ -8,7 +8,7 @@ use std::error::Error;
 
 use crate::search_highlight::search_patterns;
 
-const ENTRY_NS: &'static str = "http://www.w3.org/2005/Atom";
+const ENTRY_NS: &str = "http://www.w3.org/2005/Atom";
 
 #[derive(Debug, Default, PartialEq)]
 pub struct ArxivEntry {
@@ -49,7 +49,7 @@ impl ArxivEntry {
     pub fn contains_author(&self, author_patterns: Option<&[&str]>) -> bool {
         if let Some(patterns) = author_patterns {
             let matches = search_patterns(&self.all_authors, patterns);
-            matches.len() > 0
+            !matches.is_empty()
         } else {
             false
         }
@@ -107,7 +107,7 @@ impl ArxivQueryResult {
                     true => articles.push(ArxivEntry::new(
                         title.replace("\n ", "").to_owned(), // arxiv has this formatting
                         authors.to_owned(),
-                        summary.replace("\n", " ").to_owned(),
+                        summary.replace('\n', " ").to_owned(),
                         id.to_owned(),
                         updated.to_owned(),
                         published.to_owned(),
