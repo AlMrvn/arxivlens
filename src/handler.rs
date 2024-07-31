@@ -21,6 +21,23 @@ pub fn handle_key_events(key_event: KeyEvent, app: &mut App) -> AppResult<()> {
         KeyCode::Down | KeyCode::Char('j') => {
             app.select_next();
         }
+        // Movement a la Vim for 10 lines at a time
+        // TODO: Make these movements half screen.
+        KeyCode::Char('d') => {
+            if key_event.modifiers == KeyModifiers::CONTROL {
+                for _ in 0..10 {
+                    app.select_next();
+                }
+            }
+        }
+        // TODO: Make this movement half screen
+        KeyCode::Char('u') => {
+            if key_event.modifiers == KeyModifiers::CONTROL {
+                for _ in 0..10 {
+                    app.select_previous();
+                }
+            }
+        }
         KeyCode::Char('g') => {
             app.select_first();
         }

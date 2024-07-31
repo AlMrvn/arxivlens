@@ -42,7 +42,7 @@ impl<'a> ArticleFeed<'a> {
                     .title("arXiv Feed"),
             )
             .style(theme.main)
-            .highlight_style(theme.highlight)
+            .highlight_style(theme.selection)
             .highlight_symbol("> ")
             .repeat_highlight_symbol(true)
             .direction(ListDirection::TopToBottom)
