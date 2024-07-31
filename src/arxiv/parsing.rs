@@ -53,41 +53,6 @@ fn extract_authors(entry: &Element) -> Result<Vec<String>, Box<dyn Error>> {
     Ok(names)
 }
 
-pub fn parse_arxiv_entries(content: &str) -> Result<Vec<ArxivEntry>, Box<dyn Error>> {
-    let root: Element = content.parse().unwrap();
-    let mut articles: Vec<ArxivEntry> = Vec::new();
-
-    for child in root.children() {
-        if child.is("entry", ENTRY_NS) {
-            // Extract the main information
-            let title = child.get_child("title", ENTRY_NS).unwrap().text();
-            let id = child.get_child("id", ENTRY_NS).unwrap().text();
-            let summary = child.get_child("summary", ENTRY_NS).unwrap().text();
-            let updated = child.get_child("updated", ENTRY_NS).unwrap().text();
-            let published = child.get_child("published", ENTRY_NS).unwrap().text();
-
-            // Extract the authors which have one more depth.
-            let authors = extract_authors(child)?;
-
-            // Only add the new entry, ie published == updated
-            match updated.as_str() == published.as_str() {
-                true => articles.push(ArxivEntry {
-                    title: title.replace("\n ", "").to_owned(), // arxiv has this formatting
-                    authors: authors.to_owned(),
-                    summary: summary.replace("\n", " ").to_owned(),
-                    id: id.to_owned(),
-                    updated: updated.to_owned(),
-                    published: published.to_owned(),
-                }),
-                _ => (),
-            }
-        }
-    }
-    // Shadowing to make it immutable
-    let articles = articles;
-    Ok(articles)
-}
-
 /// Storing the result of the arxiv query
 #[derive(Debug, Default, PartialEq)]
 pub struct ArxivQueryResult {
@@ -122,9 +87,9 @@ impl ArxivQueryResult {
                 // Only add the new entry, ie published == updated
                 match updated.as_str() == published.as_str() {
                     true => articles.push(ArxivEntry {
-                        title: title.to_owned(),
+                        title: title.replace("\n ", "").to_owned(), // arxiv has this formatting
                         authors: authors.to_owned(),
-                        summary: summary.to_owned(),
+                        summary: summary.replace("\n", " ").to_owned(),
                         id: id.to_owned(),
                         updated: updated.to_owned(),
                         published: published.to_owned(),
