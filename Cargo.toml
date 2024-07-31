@@ -1,6 +1,6 @@
 [package]
 name = "arxivlens"
-documentation = "Terminal User Interface (TUI) for exploring arXiv"
+description = "Terminal User Interface (TUI) for exploring arXiv"
 version = "0.1.0"
 authors = ["Alexis Morvan <morvan.alexis@gmail.com>"]
 license = "MIT"
