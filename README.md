@@ -17,10 +17,22 @@ This project arose from a desire to create a convenient way to explore the lates
 - Support for all arXiv categories (e.g., quant-ph, cs.AI, math.AG)
 
 ## Installation
-To install this as a CLI, you'll need [Rust installed](https://www.rust-lang.org/tools/install) then copy this repo and use cargo to compile the project into your path:
+
+### From crates.io (Stable Release)
 ```bash
+cargo install arxivlens
+```
+
+### From GitHub (Development Version)
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/arxivlens.git
+cd arxivlens
+
+# Install the development version
 cargo install --path .
 ```
+
 You will then be able to use the command `arxivlens` from any place in your system.
 
 ## Usage
@@ -82,17 +94,40 @@ The project is organized as follows:
 
 ```text
 src/
-├── arxiv_parsing.rs -> parsing of the XML returned by the arXiv API and search query
-├── arxiv_query.rs   -> API for the arXiv API. Construction of the query url and 
-├── app.rs           -> holds the state and application logic for the TUI
-├── config.rs        -> handles the configuration for the query and the highlights
-├── event.rs         -> handles the terminal events (key press, mouse click, resize, etc.)
-├── handler.rs       -> handles the key press events and updates the application
-├── lib.rs           -> module definitions
-├── main.rs          -> entry-point
-├── tui.rs           -> initializes/exits the terminal interface
-└── ui.rs            -> renders the widgets / UI
+├── main.rs           # Application entry point and CLI argument handling
+├── lib.rs            # Library exports and module declarations
+├── app.rs            # Main application state and logic
+├── config.rs         # Configuration management and validation
+├── event.rs          # Event handling system
+├── handler.rs        # Event handlers for user interactions
+├── tui.rs            # Terminal UI setup and rendering
+├── ui.rs             # UI module declarations
+├── search_highlight.rs # Search result highlighting
+├── arxiv.rs          # Arxiv module declarations
+├── ui/               # UI components
+│   ├── list.rs       # Paper list view
+│   ├── detail.rs     # Paper detail view
+│   └── style.rs      # UI styling and themes
+└── arxiv/            # Arxiv API integration
+    ├── query.rs      # Arxiv API query handling
+    └── parsing.rs    # XML response parsing
 ```
+
+### Key Components
+
+- **main.rs**: Handles CLI arguments and initializes the application
+- **app.rs**: Manages application state and coordinates between components
+- **config.rs**: Handles configuration loading, validation, and defaults
+- **event.rs**: Defines the event system for handling user input
+- **handler.rs**: Implements event handlers for user interactions
+- **tui.rs**: Sets up the terminal UI and handles rendering
+- **ui/**: Contains UI components for different views
+  - **list.rs**: Displays the list of papers
+  - **detail.rs**: Shows detailed paper information
+  - **style.rs**: Defines UI styling and themes
+- **arxiv/**: Manages Arxiv API integration
+  - **query.rs**: Handles API queries and responses
+  - **parsing.rs**: Parses XML responses into Rust structs
 
 ## Contributing
 Contributions are welcome! Please feel free to submit a Pull Request.
