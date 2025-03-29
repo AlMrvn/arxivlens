@@ -103,16 +103,15 @@ impl ArxivQueryResult {
                 };
 
                 // Only add the new entry, ie published == updated
-                match updated.as_str() == published.as_str() {
-                    true => articles.push(ArxivEntry::new(
+                if updated.as_str() == published.as_str() {
+                    articles.push(ArxivEntry::new(
                         title.replace("\n ", "").to_owned(), // arxiv has this formatting
                         authors.to_owned(),
                         summary.replace('\n', " ").to_owned(),
                         id.to_owned(),
                         updated.to_owned(),
                         published.to_owned(),
-                    )),
-                    _ => (),
+                    ));
                 }
             }
         }

@@ -13,7 +13,7 @@ pub struct ArticleFeed<'a> {
     pub state: ListState,
 }
 
-impl<'a> ArticleFeed<'a> {
+impl ArticleFeed<'_> {
     pub fn new(
         query_result: &ArxivQueryResult,
         highlight_authors: Option<&[&str]>,
