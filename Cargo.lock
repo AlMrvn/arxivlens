@@ -123,6 +123,7 @@ dependencies = [
  "ratatui",
  "reqwest",
  "serde",
+ "tempfile",
  "toml",
  "xdg",
 ]

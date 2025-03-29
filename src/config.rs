@@ -1,9 +1,31 @@
 use serde::Deserialize;
+use std::error::Error;
+use std::fmt;
+use std::path::PathBuf;
 
 const APP_DIR_NAME: &str = "arxivlens";
 const CONFIG_FILE_NAME: &str = "config.toml";
 
 const DEFAULT_ARXIV_CATEGORY: &str = "quant-ph";
+
+#[derive(Debug)]
+pub enum ConfigError {
+    XdgError(String),
+    IoError(std::io::Error),
+    ParseError(toml::de::Error),
+}
+
+impl fmt::Display for ConfigError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ConfigError::XdgError(e) => write!(f, "XDG directory error: {}", e),
+            ConfigError::IoError(e) => write!(f, "Failed to read config file: {}", e),
+            ConfigError::ParseError(e) => write!(f, "Failed to parse config file: {}", e),
+        }
+    }
+}
+
+impl Error for ConfigError {}
 
 #[derive(Debug, Default, Clone, PartialEq, Eq, Deserialize)]
 pub struct Config {
@@ -55,77 +77,145 @@ fn query_default_authors() -> Option<Vec<String>> {
 }
 
 impl Config {
-    pub fn load() -> Config {
-        let path = xdg::BaseDirectories::with_prefix(APP_DIR_NAME)
-            .unwrap()
-            .get_config_file(CONFIG_FILE_NAME);
+    pub fn load() -> Result<Config, ConfigError> {
+        let base_dirs = xdg::BaseDirectories::with_prefix(APP_DIR_NAME)
+            .map_err(|e| ConfigError::XdgError(e.to_string()))?;
+            
+        let path = base_dirs.get_config_file(CONFIG_FILE_NAME);
+        
         if path.exists() {
-            let content = std::fs::read_to_string(path).unwrap();
-            toml::from_str(&content).unwrap()
+            Self::load_from_file(path)
         } else {
-            Config::default()
+            Ok(Config::default())
         }
+    }
+
+    fn load_from_file(path: PathBuf) -> Result<Config, ConfigError> {
+        let content = std::fs::read_to_string(path)
+            .map_err(ConfigError::IoError)?;
+            
+        toml::from_str(&content)
+            .map_err(ConfigError::ParseError)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::fs;
+    use tempfile::TempDir;
 
     #[test]
-    fn test_config_default() {
-        let actual = Config::default();
-        let expected = Config {
-            query: QueryConfig {
-                category: "quant-ph".into(),
-            },
-            highlight: HighlightConfig {
-                keywords: None,
-                authors: None,
-            },
-        };
-
-        assert_eq!(actual, expected);
+    fn test_load_default_config() {
+        let config = Config::default();
+        assert_eq!(config.query.category, DEFAULT_ARXIV_CATEGORY);
+        assert_eq!(config.highlight.keywords, None);
+        assert_eq!(config.highlight.authors, None);
     }
 
     #[test]
-    fn test_config_complete_toml() {
-        let toml = r#"
+    fn test_load_from_file() -> Result<(), ConfigError> {
+        let temp_dir = TempDir::new().unwrap();
+        let config_path = temp_dir.path().join("config.toml");
+        let config_content = r#"
+            [query]
+            category = "cs.AI"
+            
+            [highlight]
+            authors = ["Test Author"]
+            keywords = ["quantum"]
+        "#;
+        fs::write(&config_path, config_content).unwrap();
+
+        let config = Config::load_from_file(config_path)?;
+        assert_eq!(config.query.category, "cs.AI");
+        assert_eq!(config.highlight.authors, Some(vec!["Test Author".to_string()]));
+        assert_eq!(config.highlight.keywords, Some(vec!["quantum".to_string()]));
+        
+        Ok(())
+    }
+
+    #[test]
+    fn test_invalid_toml() {
+        let temp_dir = TempDir::new().unwrap();
+        let config_path = temp_dir.path().join("config.toml");
+        let invalid_content = r#"
+            [query
+            category = "invalid"
+        "#;
+        fs::write(&config_path, invalid_content).unwrap();
+
+        let result = Config::load_from_file(config_path);
+        assert!(matches!(result, Err(ConfigError::ParseError(_))));
+    }
+
+    #[test]
+    fn test_io_error() {
+        let nonexistent_path = PathBuf::from("/nonexistent/path/config.toml");
+        let result = Config::load_from_file(nonexistent_path);
+        assert!(matches!(result, Err(ConfigError::IoError(_))));
+    }
+
+    #[test]
+    fn test_partial_config() -> Result<(), ConfigError> {
+        let temp_dir = TempDir::new().unwrap();
+        let config_path = temp_dir.path().join("config.toml");
+        // Only specify query section, highlight should use defaults
+        let config_content = r#"
+            [query]
+            category = "math.AG"
+        "#;
+        fs::write(&config_path, config_content).unwrap();
+
+        let config = Config::load_from_file(config_path)?;
+        assert_eq!(config.query.category, "math.AG");
+        assert_eq!(config.highlight.keywords, None);
+        assert_eq!(config.highlight.authors, None);
+        
+        Ok(())
+    }
+
+    #[test]
+    fn test_empty_config() -> Result<(), ConfigError> {
+        let temp_dir = TempDir::new().unwrap();
+        let config_path = temp_dir.path().join("config.toml");
+        fs::write(&config_path, "").unwrap();
+
+        let config = Config::load_from_file(config_path)?;
+        // Should use all defaults
+        assert_eq!(config.query.category, DEFAULT_ARXIV_CATEGORY);
+        assert_eq!(config.highlight.keywords, None);
+        assert_eq!(config.highlight.authors, None);
+        
+        Ok(())
+    }
+
+    #[test]
+    fn test_multiple_authors_and_keywords() -> Result<(), ConfigError> {
+        let temp_dir = TempDir::new().unwrap();
+        let config_path = temp_dir.path().join("config.toml");
+        let config_content = r#"
             [query]
             category = "quant-ph"
+            
             [highlight]
-            keywords = ["apple", "berry"]
-            authors = ["Schrodinger", "Becquerel"]
+            authors = ["Einstein", "Bohr", "Heisenberg"]
+            keywords = ["quantum", "entanglement", "superposition"]
         "#;
-        let actual: Config = toml::from_str(toml).unwrap();
-        let expected = Config {
-            query: QueryConfig {
-                category: "quant-ph".into(),
-            },
-            highlight: HighlightConfig {
-                keywords: Some(vec!["apple".to_string(), "berry".to_string()]),
-                authors: Some(vec!["Schrodinger".to_string(), "Becquerel".to_string()]),
-            },
-        };
-        assert_eq!(actual, expected);
-    }
+        fs::write(&config_path, config_content).unwrap();
 
-    #[test]
-    fn test_config_partial_toml() {
-        let toml = r#"
-            [highlight]
-            authors = ["Schrodinger", "Becquerel"]
-        "#;
-        let actual: Config = toml::from_str(toml).unwrap();
-        let expected = Config {
-            query: QueryConfig {
-                category: "quant-ph".into(),
-            },
-            highlight: HighlightConfig {
-                keywords: None,
-                authors: Some(vec!["Schrodinger".to_string(), "Becquerel".to_string()]),
-            },
-        };
-        assert_eq!(actual, expected);
+        let config = Config::load_from_file(config_path)?;
+        assert_eq!(config.highlight.authors, Some(vec![
+            "Einstein".to_string(),
+            "Bohr".to_string(),
+            "Heisenberg".to_string()
+        ]));
+        assert_eq!(config.highlight.keywords, Some(vec![
+            "quantum".to_string(),
+            "entanglement".to_string(),
+            "superposition".to_string()
+        ]));
+        
+        Ok(())
     }
 }
