@@ -218,4 +218,102 @@ mod tests {
         
         Ok(())
     }
+
+    #[test]
+    fn test_malformed_category() -> Result<(), ConfigError> {
+        let temp_dir = TempDir::new().unwrap();
+        let config_path = temp_dir.path().join("config.toml");
+        let config_content = r#"
+            [query]
+            category = 123  # Should be a string, not a number
+
+            [highlight]
+            authors = ["Test Author"]
+        "#;
+        fs::write(&config_path, config_content).unwrap();
+
+        let result = Config::load_from_file(config_path);
+        assert!(matches!(result, Err(ConfigError::ParseError(_))));
+        Ok(())
+    }
+
+    #[test]
+    fn test_case_sensitivity() -> Result<(), ConfigError> {
+        let temp_dir = TempDir::new().unwrap();
+        let config_path = temp_dir.path().join("config.toml");
+        let config_content = r#"
+            [query]
+            category = "QUANT-PH"  # Different case from default
+            
+            [highlight]
+            authors = ["EINSTEIN", "Bohr", "heisenberg"]
+            keywords = ["QUANTUM", "Entanglement", "superposition"]
+        "#;
+        fs::write(&config_path, config_content).unwrap();
+
+        let config = Config::load_from_file(config_path)?;
+        assert_eq!(config.query.category, "QUANT-PH");  // Category should preserve case
+        assert_eq!(config.highlight.authors, Some(vec![
+            "EINSTEIN".to_string(),
+            "Bohr".to_string(),
+            "heisenberg".to_string()
+        ]));
+        assert_eq!(config.highlight.keywords, Some(vec![
+            "QUANTUM".to_string(),
+            "Entanglement".to_string(),
+            "superposition".to_string()
+        ]));
+        
+        Ok(())
+    }
+
+    #[test]
+    fn test_invalid_highlight_format() {
+        let temp_dir = TempDir::new().unwrap();
+        let config_path = temp_dir.path().join("config.toml");
+        let config_content = r#"
+            [query]
+            category = "quant-ph"
+            
+            [highlight]
+            authors = "Einstein"  # Should be an array, not a string
+            keywords = ["quantum"]
+        "#;
+        fs::write(&config_path, config_content).unwrap();
+
+        let result = Config::load_from_file(config_path);
+        assert!(matches!(result, Err(ConfigError::ParseError(_))));
+    }
+
+    #[test]
+    fn test_duplicate_sections() {
+        let temp_dir = TempDir::new().unwrap();
+        let config_path = temp_dir.path().join("config.toml");
+        let config_content = r#"
+            [query]
+            category = "quant-ph"
+            
+            [highlight]
+            authors = ["Einstein"]
+            
+            [query]  # Duplicate section
+            category = "cs.AI"
+        "#;
+        fs::write(&config_path, config_content).unwrap();
+
+        let result = Config::load_from_file(config_path);
+        assert!(matches!(result, Err(ConfigError::ParseError(_))));
+    }
+
+    #[test]
+    fn test_xdg_error_handling() {
+        // This test might be environment-dependent
+        // We can at least verify that the XdgError variant exists and can be created
+        let error = ConfigError::XdgError("test error".to_string());
+        assert!(matches!(error, ConfigError::XdgError(_)));
+        
+        // Test error formatting
+        let error_str = format!("{}", error);
+        assert_eq!(error_str, "XDG directory error: test error");
+    }
 }
