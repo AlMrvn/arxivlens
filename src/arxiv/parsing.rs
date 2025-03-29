@@ -187,7 +187,7 @@ mod tests {
               <author>
                 <name>Incomplete Author
             </feed>"#;
-        
+
         let result = Element::from_str(malformed_xml);
         assert!(result.is_err());
     }
@@ -205,19 +205,19 @@ mod tests {
 
         // Test exact match
         assert!(entry.contains_author(Some(&["John Doe"])));
-        
+
         // Test partial match
         assert!(entry.contains_author(Some(&["Doe"])));
-        
+
         // Test case sensitivity
         assert!(entry.contains_author(Some(&["john doe"])));
-        
+
         // Test no match
         assert!(!entry.contains_author(Some(&["Albert Einstein"])));
-        
+
         // Test empty patterns
         assert!(!entry.contains_author(Some(&[])));
-        
+
         // Test None patterns
         assert!(!entry.contains_author(None));
     }

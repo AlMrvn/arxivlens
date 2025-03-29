@@ -1,7 +1,7 @@
 //! Module for highligting keyword in a text.
 
-use ratatui::text::{Line, Span};
 use aho_corasick::AhoCorasick;
+use ratatui::text::{Line, Span};
 
 use crate::ui::Theme;
 

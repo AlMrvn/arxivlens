@@ -80,9 +80,9 @@ impl Config {
     pub fn load() -> Result<Config, ConfigError> {
         let base_dirs = xdg::BaseDirectories::with_prefix(APP_DIR_NAME)
             .map_err(|e| ConfigError::XdgError(e.to_string()))?;
-            
+
         let path = base_dirs.get_config_file(CONFIG_FILE_NAME);
-        
+
         if path.exists() {
             Self::load_from_file(path)
         } else {
@@ -91,11 +91,9 @@ impl Config {
     }
 
     fn load_from_file(path: PathBuf) -> Result<Config, ConfigError> {
-        let content = std::fs::read_to_string(path)
-            .map_err(ConfigError::IoError)?;
-            
-        toml::from_str(&content)
-            .map_err(ConfigError::ParseError)
+        let content = std::fs::read_to_string(path).map_err(ConfigError::IoError)?;
+
+        toml::from_str(&content).map_err(ConfigError::ParseError)
     }
 }
 
@@ -129,9 +127,12 @@ mod tests {
 
         let config = Config::load_from_file(config_path)?;
         assert_eq!(config.query.category, "cs.AI");
-        assert_eq!(config.highlight.authors, Some(vec!["Test Author".to_string()]));
+        assert_eq!(
+            config.highlight.authors,
+            Some(vec!["Test Author".to_string()])
+        );
         assert_eq!(config.highlight.keywords, Some(vec!["quantum".to_string()]));
-        
+
         Ok(())
     }
 
@@ -171,7 +172,7 @@ mod tests {
         assert_eq!(config.query.category, "math.AG");
         assert_eq!(config.highlight.keywords, None);
         assert_eq!(config.highlight.authors, None);
-        
+
         Ok(())
     }
 
@@ -186,7 +187,7 @@ mod tests {
         assert_eq!(config.query.category, DEFAULT_ARXIV_CATEGORY);
         assert_eq!(config.highlight.keywords, None);
         assert_eq!(config.highlight.authors, None);
-        
+
         Ok(())
     }
 
@@ -205,17 +206,23 @@ mod tests {
         fs::write(&config_path, config_content).unwrap();
 
         let config = Config::load_from_file(config_path)?;
-        assert_eq!(config.highlight.authors, Some(vec![
-            "Einstein".to_string(),
-            "Bohr".to_string(),
-            "Heisenberg".to_string()
-        ]));
-        assert_eq!(config.highlight.keywords, Some(vec![
-            "quantum".to_string(),
-            "entanglement".to_string(),
-            "superposition".to_string()
-        ]));
-        
+        assert_eq!(
+            config.highlight.authors,
+            Some(vec![
+                "Einstein".to_string(),
+                "Bohr".to_string(),
+                "Heisenberg".to_string()
+            ])
+        );
+        assert_eq!(
+            config.highlight.keywords,
+            Some(vec![
+                "quantum".to_string(),
+                "entanglement".to_string(),
+                "superposition".to_string()
+            ])
+        );
+
         Ok(())
     }
 
@@ -252,18 +259,24 @@ mod tests {
         fs::write(&config_path, config_content).unwrap();
 
         let config = Config::load_from_file(config_path)?;
-        assert_eq!(config.query.category, "QUANT-PH");  // Category should preserve case
-        assert_eq!(config.highlight.authors, Some(vec![
-            "EINSTEIN".to_string(),
-            "Bohr".to_string(),
-            "heisenberg".to_string()
-        ]));
-        assert_eq!(config.highlight.keywords, Some(vec![
-            "QUANTUM".to_string(),
-            "Entanglement".to_string(),
-            "superposition".to_string()
-        ]));
-        
+        assert_eq!(config.query.category, "QUANT-PH"); // Category should preserve case
+        assert_eq!(
+            config.highlight.authors,
+            Some(vec![
+                "EINSTEIN".to_string(),
+                "Bohr".to_string(),
+                "heisenberg".to_string()
+            ])
+        );
+        assert_eq!(
+            config.highlight.keywords,
+            Some(vec![
+                "QUANTUM".to_string(),
+                "Entanglement".to_string(),
+                "superposition".to_string()
+            ])
+        );
+
         Ok(())
     }
 
@@ -311,7 +324,7 @@ mod tests {
         // We can at least verify that the XdgError variant exists and can be created
         let error = ConfigError::XdgError("test error".to_string());
         assert!(matches!(error, ConfigError::XdgError(_)));
-        
+
         // Test error formatting
         let error_str = format!("{}", error);
         assert_eq!(error_str, "XDG directory error: test error");

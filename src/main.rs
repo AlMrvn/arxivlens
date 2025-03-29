@@ -32,8 +32,8 @@ struct Args {
 fn main() -> AppResult<()> {
     // --- Construct the arXiv query with the user args ---
     let args = Args::parse();
-    let config = config::Config::load()
-        .map_err(|e| format!("Failed to load configuration: {}", e))?;
+    let config =
+        config::Config::load().map_err(|e| format!("Failed to load configuration: {}", e))?;
 
     // TODO: Get the them out of the config:
     let theme = Theme::default();
@@ -61,7 +61,7 @@ fn main() -> AppResult<()> {
     let query_result = ArxivQueryResult::from_query(query);
     // Create an application.
     let mut app = App::new(&query_result, &config.highlight, theme);
-  
+
     // Initialize the terminal user interface.
     let backend = CrosstermBackend::new(io::stderr());
     let terminal = Terminal::new(backend)?;
