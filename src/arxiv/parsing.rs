@@ -103,16 +103,15 @@ impl ArxivQueryResult {
                 };
 
                 // Only add the new entry, ie published == updated
-                match updated.as_str() == published.as_str() {
-                    true => articles.push(ArxivEntry::new(
+                if updated.as_str() == published.as_str() {
+                    articles.push(ArxivEntry::new(
                         title.replace("\n ", "").to_owned(), // arxiv has this formatting
                         authors.to_owned(),
                         summary.replace('\n', " ").to_owned(),
                         id.to_owned(),
                         updated.to_owned(),
                         published.to_owned(),
-                    )),
-                    _ => (),
+                    ));
                 }
             }
         }
@@ -165,6 +164,75 @@ mod tests {
         assert_eq!(expected_authors, extracted_authors);
 
         Ok(())
+    }
+
+    #[test]
+    fn test_empty_author_list() -> Result<(), Box<dyn Error>> {
+        let author_element = Element::from_str(
+            r#"<?xml version="1.0" encoding="UTF-8"?>
+            <feed xmlns="http://www.w3.org/2005/Atom">
+            </feed>"#,
+        );
+
+        let extracted_authors = extract_authors(&author_element?)?;
+        assert!(extracted_authors.is_empty());
+        Ok(())
+    }
+
+    #[test]
+    fn test_malformed_author_xml() {
+        let malformed_xml = r#"<?xml version="1.0" encoding="UTF-8"?>
+            <feed xmlns="http://www.w3.org/2005/Atom">
+              <author>
+                <name>Incomplete Author
+            </feed>"#;
+
+        let result = Element::from_str(malformed_xml);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_arxiv_entry_contains_author() {
+        let entry = ArxivEntry::new(
+            "Test Title".to_string(),
+            vec!["John Doe".to_string(), "Jane Smith".to_string()],
+            "Test Summary".to_string(),
+            "test_id".to_string(),
+            "2024-03-28".to_string(),
+            "2024-03-28".to_string(),
+        );
+
+        // Test exact match
+        assert!(entry.contains_author(Some(&["John Doe"])));
+
+        // Test partial match
+        assert!(entry.contains_author(Some(&["Doe"])));
+
+        // Test case sensitivity
+        assert!(entry.contains_author(Some(&["john doe"])));
+
+        // Test no match
+        assert!(!entry.contains_author(Some(&["Albert Einstein"])));
+
+        // Test empty patterns
+        assert!(!entry.contains_author(Some(&[])));
+
+        // Test None patterns
+        assert!(!entry.contains_author(None));
+    }
+
+    #[test]
+    fn test_get_all_authors() {
+        let entry = ArxivEntry::new(
+            "Test Title".to_string(),
+            vec!["John Doe".to_string(), "Jane Smith".to_string()],
+            "Test Summary".to_string(),
+            "test_id".to_string(),
+            "2024-03-28".to_string(),
+            "2024-03-28".to_string(),
+        );
+
+        assert_eq!(entry.get_all_authors(), "John Doe, Jane Smith");
     }
 
     #[test]

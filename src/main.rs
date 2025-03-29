@@ -20,11 +20,11 @@ const DEFAULT_SORT_BY: SortBy = SortBy::SubmittedDate;
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {
-    /// Name of the author to look
+    /// Name of the author to search for in arXiv entries
     #[arg(short, long, default_value = None)]
     author: Option<String>,
 
-    /// Number of times to greet
+    /// ArXiv category to search (e.g., "quant-ph", "cs.AI")
     #[arg(short, long, default_value = None)]
     category: Option<String>,
 }
@@ -32,7 +32,8 @@ struct Args {
 fn main() -> AppResult<()> {
     // --- Construct the arXiv query with the user args ---
     let args = Args::parse();
-    let config = config::Config::load();
+    let config =
+        config::Config::load().map_err(|e| format!("Failed to load configuration: {}", e))?;
 
     // TODO: Get the them out of the config:
     let theme = Theme::default();
@@ -60,7 +61,7 @@ fn main() -> AppResult<()> {
     let query_result = ArxivQueryResult::from_query(query);
     // Create an application.
     let mut app = App::new(&query_result, &config.highlight, theme);
-  
+
     // Initialize the terminal user interface.
     let backend = CrosstermBackend::new(io::stderr());
     let terminal = Terminal::new(backend)?;

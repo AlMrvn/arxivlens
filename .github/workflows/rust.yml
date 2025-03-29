@@ -1,4 +1,4 @@
-name: Rust
+name: Rust CI
 
 on:
   push:
@@ -10,13 +10,31 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build:
-
+  test:
+    name: Test
     runs-on: ubuntu-latest
-
     steps:
     - uses: actions/checkout@v4
-    - name: Build
-      run: cargo build --verbose
+    
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        components: rustfmt, clippy
+        cache: 'cargo'
+    
+    - name: Rust Cache
+      uses: Swatinem/rust-cache@v2
+      with:
+        prefix-key: rust-cargo-cache
+    
+    - name: Check formatting
+      run: cargo fmt --all -- --check
+    
+    - name: Clippy
+      run: cargo clippy -- -D warnings
+    
     - name: Run tests
       run: cargo test --verbose
+    
+    - name: Build
+      run: cargo build --verbose
