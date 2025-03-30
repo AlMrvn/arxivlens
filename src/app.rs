@@ -1,6 +1,6 @@
 use crate::arxiv::ArxivQueryResult;
-use crate::config::{HighlightConfig, Config};
-use crate::ui::{ArticleDetails, ArticleFeed, Theme, ConfigPopup};
+use crate::config::{Config, HighlightConfig};
+use crate::ui::{ArticleDetails, ArticleFeed, ConfigPopup, Theme};
 use arboard::Clipboard;
 use std::error::Error;
 
@@ -146,7 +146,10 @@ impl App<'_> {
 
         // Render the config popup if visible
         if self.config_popup.is_visible() {
-            if let Err(e) = self.config_popup.render(frame, frame.size(), &self.theme, &self.config) {
+            if let Err(e) = self
+                .config_popup
+                .render(frame, frame.size(), &self.theme, &self.config)
+            {
                 // Log the error but don't crash
                 eprintln!("Error rendering config popup: {}", e);
             }
