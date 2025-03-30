@@ -7,11 +7,24 @@ use ratatui::{
     Frame,
 };
 
+/// Errors that can occur when rendering the config popup
+#[derive(Debug, thiserror::Error, Clone)]
+pub enum ConfigPopupError {
+    #[error("Invalid layout: {0}")]
+    LayoutError(String),
+    #[error("Rendering error: {0}")]
+    RenderingError(String),
+    #[error("Configuration error: {0}")]
+    ConfigError(String),
+}
+
 /// A popup widget for displaying the current configuration.
 #[derive(Debug)]
 pub struct ConfigPopup {
     /// Whether the popup is visible
     visible: bool,
+    /// Last error that occurred during rendering
+    last_error: Option<ConfigPopupError>,
 }
 
 impl ConfigPopup {
@@ -19,12 +32,15 @@ impl ConfigPopup {
     pub fn new() -> Self {
         Self {
             visible: false,
+            last_error: None,
         }
     }
 
     /// Toggles the visibility of the popup.
     pub fn toggle(&mut self) {
         self.visible = !self.visible;
+        // Clear any previous errors when toggling visibility
+        self.last_error = None;
     }
 
     /// Returns whether the popup is visible.
@@ -32,14 +48,33 @@ impl ConfigPopup {
         self.visible
     }
 
+    /// Returns the last error that occurred during rendering, if any.
+    pub fn last_error(&self) -> Option<&ConfigPopupError> {
+        self.last_error.as_ref()
+    }
+
     /// Renders the popup.
-    pub fn render(&mut self, frame: &mut Frame, area: ratatui::layout::Rect, theme: &Theme, config: &Config) {
+    pub fn render(&mut self, frame: &mut Frame, area: ratatui::layout::Rect, theme: &Theme, config: &Config) -> Result<(), ConfigPopupError> {
         if !self.visible {
-            return;
+            return Ok(());
+        }
+
+        // Validate area dimensions
+        if area.width < 20 || area.height < 10 {
+            let error = ConfigPopupError::LayoutError("Popup area too small for rendering".to_string());
+            self.last_error = Some(error.clone());
+            return Err(error);
         }
 
         // Create a centered popup
         let popup_area = centered_rect(60, 40, area);
+
+        // Validate popup area
+        if popup_area.width < 10 || popup_area.height < 5 {
+            let error = ConfigPopupError::LayoutError("Calculated popup area too small".to_string());
+            self.last_error = Some(error.clone());
+            return Err(error);
+        }
 
         // Create a block with double borders for more distinction
         let block = Block::default()
@@ -102,6 +137,10 @@ impl ConfigPopup {
             .style(theme.main);
 
         frame.render_widget(list, layout[1]);
+
+        // Clear any previous errors if rendering was successful
+        self.last_error = None;
+        Ok(())
     }
 }
 
@@ -124,4 +163,157 @@ fn centered_rect(percent_x: u16, percent_y: u16, r: ratatui::layout::Rect) -> ra
             Constraint::Percentage((100 - percent_x) / 2),
         ])
         .split(popup_layout[1])[1]
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::{HighlightConfig, QueryConfig};
+    use ratatui::layout::Rect;
+    use ratatui::backend::TestBackend;
+    use ratatui::Terminal;
+
+    fn create_test_config() -> Config {
+        Config {
+            query: QueryConfig {
+                category: "quant-ph".to_string(),
+            },
+            highlight: HighlightConfig {
+                keywords: Some(vec!["quantum".to_string(), "entanglement".to_string()]),
+                authors: Some(vec!["Einstein".to_string(), "Bohr".to_string()]),
+            },
+        }
+    }
+
+    #[test]
+    fn test_popup_visibility() {
+        let mut popup = ConfigPopup::new();
+        
+        // Initially not visible
+        assert!(!popup.is_visible());
+        
+        // Toggle to visible
+        popup.toggle();
+        assert!(popup.is_visible());
+        
+        // Toggle back to not visible
+        popup.toggle();
+        assert!(!popup.is_visible());
+    }
+
+    #[test]
+    fn test_popup_rendering() {
+        let mut popup = ConfigPopup::new();
+        let theme = Theme::default();
+        let config = create_test_config();
+        
+        // Create a test buffer
+        let area = Rect::new(0, 0, 100, 50);
+        let backend = TestBackend::new(100, 50);
+        let mut terminal = Terminal::new(backend).unwrap();
+        
+        // Test rendering when not visible
+        assert!(!popup.is_visible());
+        
+        // Test rendering when visible
+        popup.toggle();
+        let result = terminal.draw(|frame| {
+            if let Err(e) = popup.render(frame, area, &theme, &config) {
+                panic!("Failed to render popup: {}", e);
+            }
+        });
+        assert!(result.is_ok());
+        assert!(popup.is_visible());
+    }
+
+    #[test]
+    fn test_popup_with_empty_config() {
+        let mut popup = ConfigPopup::new();
+        let theme = Theme::default();
+        let config = Config::default(); // Empty config
+        
+        // Create a test buffer
+        let area = Rect::new(0, 0, 100, 50);
+        let backend = TestBackend::new(100, 50);
+        let mut terminal = Terminal::new(backend).unwrap();
+        
+        // Test rendering with empty config
+        popup.toggle();
+        let result = terminal.draw(|frame| {
+            if let Err(e) = popup.render(frame, area, &theme, &config) {
+                panic!("Failed to render popup: {}", e);
+            }
+        });
+        assert!(result.is_ok());
+        assert!(popup.is_visible());
+    }
+
+    #[test]
+    fn test_centered_rect() {
+        let area = Rect::new(0, 0, 100, 50);
+        let rect = centered_rect(60, 40, area);
+        
+        // Verify the rect is centered
+        assert_eq!(rect.x, 20); // (100 - 60) / 2
+        assert_eq!(rect.y, 15); // (50 - 40) / 2
+        assert_eq!(rect.width, 60);
+        assert_eq!(rect.height, 20);
+    }
+
+    #[test]
+    fn test_popup_error_handling() {
+        let mut popup = ConfigPopup::new();
+        let theme = Theme::default();
+        let config = create_test_config();
+        
+        // Test with too small area
+        let small_area = Rect::new(0, 0, 10, 5);
+        let backend = TestBackend::new(10, 5);
+        let mut terminal = Terminal::new(backend).unwrap();
+        
+        popup.toggle();
+        let result = terminal.draw(|frame| {
+            let render_result = popup.render(frame, small_area, &theme, &config);
+            assert!(render_result.is_err());
+        });
+        assert!(result.is_ok());
+        assert!(popup.last_error().is_some());
+        assert!(matches!(popup.last_error().unwrap(), ConfigPopupError::LayoutError(_)));
+    }
+
+    #[test]
+    fn test_popup_error_clearing() {
+        let mut popup = ConfigPopup::new();
+        let theme = Theme::default();
+        let config = create_test_config();
+        
+        // Create a test buffer
+        let area = Rect::new(0, 0, 100, 50);
+        let backend = TestBackend::new(100, 50);
+        let mut terminal = Terminal::new(backend).unwrap();
+        
+        // First render with small area to generate error
+        let small_area = Rect::new(0, 0, 10, 5);
+        popup.toggle(); // Make sure popup is visible
+        let _ = terminal.draw(|frame| {
+            let render_result = popup.render(frame, small_area, &theme, &config);
+            assert!(render_result.is_err());
+        });
+        
+        assert!(popup.last_error().is_some());
+        
+        // Toggle visibility to clear error
+        popup.toggle();
+        assert!(popup.last_error().is_none());
+        
+        // Render with correct area
+        let result = terminal.draw(|frame| {
+            if let Err(e) = popup.render(frame, area, &theme, &config) {
+                panic!("Failed to render popup: {}", e);
+            }
+        });
+        
+        assert!(result.is_ok());
+        assert!(popup.last_error().is_none());
+    }
 } 

@@ -146,7 +146,10 @@ impl App<'_> {
 
         // Render the config popup if visible
         if self.config_popup.is_visible() {
-            self.config_popup.render(frame, frame.size(), &self.theme, &self.config);
+            if let Err(e) = self.config_popup.render(frame, frame.size(), &self.theme, &self.config) {
+                // Log the error but don't crash
+                eprintln!("Error rendering config popup: {}", e);
+            }
         }
     }
 }
