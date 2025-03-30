@@ -1,6 +1,6 @@
 use crate::arxiv::ArxivQueryResult;
-use crate::config::HighlightConfig;
-use crate::ui::{ArticleDetails, ArticleFeed, Theme};
+use crate::config::{Config, HighlightConfig};
+use crate::ui::{ArticleDetails, ArticleFeed, ConfigPopup, Theme};
 use arboard::Clipboard;
 use std::error::Error;
 
@@ -26,6 +26,10 @@ pub struct App<'a> {
     pub article_feed: ArticleFeed<'a>,
     /// Theme
     pub theme: Theme,
+    /// Configuration popup
+    pub config_popup: ConfigPopup,
+    /// Configuration
+    pub config: Config,
 }
 
 fn option_vec_to_option_slice(option_vec: &Option<Vec<String>>) -> Option<Vec<&str>> {
@@ -40,6 +44,7 @@ impl<'a> App<'a> {
         query_result: &'a ArxivQueryResult,
         highlight_config: &'a HighlightConfig,
         theme: Theme,
+        config: Config,
     ) -> Self {
         // Constructing the highlighed feed of titles.
         let patterns = option_vec_to_option_slice(&highlight_config.authors);
@@ -51,6 +56,8 @@ impl<'a> App<'a> {
             highlight_config,
             article_feed,
             theme,
+            config_popup: ConfigPopup::new(),
+            config,
         }
     }
 }
@@ -95,6 +102,11 @@ impl App<'_> {
         clipboard.set_text(id).unwrap();
     }
 
+    /// Toggle the configuration popup
+    pub fn toggle_config(&mut self) {
+        self.config_popup.toggle();
+    }
+
     /// Render the app:
     pub fn render(&mut self, frame: &mut Frame) {
         // First we create a Layout
@@ -105,7 +117,7 @@ impl App<'_> {
 
         // adding the shortcut
         frame.render_widget(
-            Paragraph::new("   quit: q  |  up: k  | down: j | yank url: y")
+            Paragraph::new("   quit: q  |  up: k  | down: j | yank url: y | config: c")
                 .style(self.theme.shortcut)
                 .left_aligned()
                 .block(Block::new()),
@@ -130,6 +142,17 @@ impl App<'_> {
         };
 
         let article_view = ArticleDetails::new(current_entry, self.highlight_config, &self.theme);
-        article_view.render(frame, layout[1], &self.theme)
+        article_view.render(frame, layout[1], &self.theme);
+
+        // Render the config popup if visible
+        if self.config_popup.is_visible() {
+            if let Err(e) = self
+                .config_popup
+                .render(frame, frame.size(), &self.theme, &self.config)
+            {
+                // Log the error but don't crash
+                eprintln!("Error rendering config popup: {}", e);
+            }
+        }
     }
 }

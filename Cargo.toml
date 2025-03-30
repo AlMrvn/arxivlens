@@ -24,6 +24,7 @@ serde = { version = "1.0.204", features = ["derive"] }
 xdg = "2.5.2"
 toml = "0.8.16"
 itertools = "0.13.0"
+thiserror = "1.0.57"
 
 [dev-dependencies]
 tempfile = "3.10.1"
