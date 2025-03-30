@@ -47,7 +47,7 @@ fn main() -> AppResult<()> {
     if let Some(category) = &args.category {
         queries.push(SearchQuery::Category(category.to_string()))
     } else {
-        queries.push(SearchQuery::Category(config.query.category))
+        queries.push(SearchQuery::Category(config.query.category.clone()))
     }
 
     // --- Query the arxiv API ---
@@ -59,8 +59,12 @@ fn main() -> AppResult<()> {
         Some(DEFAULT_SORT_ORDER),
     );
     let query_result = ArxivQueryResult::from_query(query);
+    
+    // Create a longer-lived value for the highlight config
+    let highlight_config = config.highlight.clone();
+    
     // Create an application.
-    let mut app = App::new(&query_result, &config.highlight, theme);
+    let mut app = App::new(&query_result, &highlight_config, theme, config);
 
     // Initialize the terminal user interface.
     let backend = CrosstermBackend::new(io::stderr());
