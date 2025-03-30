@@ -3,9 +3,18 @@ use crate::ui::Theme;
 use ratatui::{
     layout::{Constraint, Direction, Layout},
     text::{Line, Span},
-    widgets::{Block, Borders, BorderType, Clear, List, ListItem, Paragraph},
+    widgets::{Block, Borders, BorderType, Clear, List, ListItem, Paragraph, ListState},
     Frame,
 };
+
+/// The current mode of the config popup
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum PopupMode {
+    /// Viewing the current configuration
+    View,
+    /// Editing the configuration (planned for future implementation)
+    Edit,
+}
 
 /// Errors that can occur when rendering the config popup
 #[derive(Debug, thiserror::Error, Clone)]
@@ -19,12 +28,30 @@ pub enum ConfigPopupError {
 }
 
 /// A popup widget for displaying the current configuration.
+/// 
+/// This widget provides a modal interface for viewing the current configuration.
+/// It is designed to be extensible for future editing capabilities, with the following
+/// features planned:
+/// - Keyboard navigation through configuration items
+/// - In-place editing of configuration values
+/// - Validation of edited values
+/// - Save/cancel functionality
+/// 
+/// Currently implemented features:
+/// - Toggle visibility with keyboard shortcut
+/// - Display current configuration values
+/// - Error handling for layout and rendering issues
+/// - Proper state management for future editing
 #[derive(Debug)]
 pub struct ConfigPopup {
     /// Whether the popup is visible
     visible: bool,
     /// Last error that occurred during rendering
     last_error: Option<ConfigPopupError>,
+    /// Current mode of the popup (currently only View is implemented)
+    mode: PopupMode,
+    /// State for the list widget (prepared for future editing)
+    list_state: ListState,
 }
 
 impl ConfigPopup {
@@ -33,6 +60,8 @@ impl ConfigPopup {
         Self {
             visible: false,
             last_error: None,
+            mode: PopupMode::View,
+            list_state: ListState::default(),
         }
     }
 
@@ -41,6 +70,10 @@ impl ConfigPopup {
         self.visible = !self.visible;
         // Clear any previous errors when toggling visibility
         self.last_error = None;
+        // Reset mode to view when toggling visibility
+        self.mode = PopupMode::View;
+        // Reset selection when toggling visibility
+        self.list_state.select(None);
     }
 
     /// Returns whether the popup is visible.
@@ -51,6 +84,16 @@ impl ConfigPopup {
     /// Returns the last error that occurred during rendering, if any.
     pub fn last_error(&self) -> Option<&ConfigPopupError> {
         self.last_error.as_ref()
+    }
+
+    /// Returns the current mode of the popup.
+    pub fn mode(&self) -> PopupMode {
+        self.mode
+    }
+
+    /// Returns the currently selected item index.
+    pub fn selected_index(&self) -> Option<usize> {
+        self.list_state.selected()
     }
 
     /// Renders the popup.
@@ -98,14 +141,25 @@ impl ConfigPopup {
         frame.render_widget(Clear, popup_area);
         frame.render_widget(block, popup_area);
 
-        // Render description
-        let description = Paragraph::new(vec![
-            Line::from(vec![
-                Span::raw("Current ArXiv search preferences. Press "),
-                Span::styled("c", theme.highlight),
-                Span::raw(" to close."),
+        // Render description based on mode
+        let description = match self.mode {
+            PopupMode::View => Paragraph::new(vec![
+                Line::from(vec![
+                    Span::raw("Current ArXiv search preferences. Press "),
+                    Span::styled("c", theme.highlight),
+                    Span::raw(" to close."),
+                ]),
             ]),
-        ])
+            PopupMode::Edit => Paragraph::new(vec![
+                Line::from(vec![
+                    Span::raw("Editing configuration. Press "),
+                    Span::styled("Esc", theme.highlight),
+                    Span::raw(" to cancel, "),
+                    Span::styled("Enter", theme.highlight),
+                    Span::raw(" to save."),
+                ]),
+            ]),
+        }
         .style(theme.main);
         frame.render_widget(description, layout[0]);
 
@@ -134,9 +188,11 @@ impl ConfigPopup {
         // Create and render the list
         let list = List::new(items)
             .block(Block::default().borders(Borders::NONE))
-            .style(theme.main);
+            .style(theme.main)
+            .highlight_style(theme.highlight)
+            .highlight_symbol(if self.mode == PopupMode::Edit { "> " } else { "" });
 
-        frame.render_widget(list, layout[1]);
+        frame.render_stateful_widget(list, layout[1], &mut self.list_state);
 
         // Clear any previous errors if rendering was successful
         self.last_error = None;
@@ -202,6 +258,38 @@ mod tests {
     }
 
     #[test]
+    fn test_popup_mode() {
+        let mut popup = ConfigPopup::new();
+        
+        // Initially in view mode
+        assert_eq!(popup.mode(), PopupMode::View);
+        
+        // Toggle visibility resets mode to view
+        popup.toggle();
+        assert_eq!(popup.mode(), PopupMode::View);
+        
+        // Toggle visibility again
+        popup.toggle();
+        assert_eq!(popup.mode(), PopupMode::View);
+    }
+
+    #[test]
+    fn test_popup_selection() {
+        let mut popup = ConfigPopup::new();
+        
+        // Initially no selection
+        assert_eq!(popup.selected_index(), None);
+        
+        // Toggle visibility resets selection
+        popup.toggle();
+        assert_eq!(popup.selected_index(), None);
+        
+        // Toggle visibility again
+        popup.toggle();
+        assert_eq!(popup.selected_index(), None);
+    }
+
+    #[test]
     fn test_popup_rendering() {
         let mut popup = ConfigPopup::new();
         let theme = Theme::default();
@@ -224,6 +312,8 @@ mod tests {
         });
         assert!(result.is_ok());
         assert!(popup.is_visible());
+        assert_eq!(popup.mode(), PopupMode::View);
+        assert_eq!(popup.selected_index(), None);
     }
 
     #[test]
@@ -246,6 +336,8 @@ mod tests {
         });
         assert!(result.is_ok());
         assert!(popup.is_visible());
+        assert_eq!(popup.mode(), PopupMode::View);
+        assert_eq!(popup.selected_index(), None);
     }
 
     #[test]
