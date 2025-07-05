@@ -18,9 +18,9 @@ pub enum ConfigError {
 impl fmt::Display for ConfigError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            ConfigError::XdgError(e) => write!(f, "XDG directory error: {}", e),
-            ConfigError::IoError(e) => write!(f, "Failed to read config file: {}", e),
-            ConfigError::ParseError(e) => write!(f, "Failed to parse config file: {}", e),
+            Self::XdgError(e) => write!(f, "XDG directory error: {e}"),
+            Self::IoError(e) => write!(f, "Failed to read config file: {e}"),
+            Self::ParseError(e) => write!(f, "Failed to parse config file: {e}"),
         }
     }
 }
@@ -77,7 +77,7 @@ fn query_default_authors() -> Option<Vec<String>> {
 }
 
 impl Config {
-    pub fn load() -> Result<Config, ConfigError> {
+    pub fn load() -> Result<Self, ConfigError> {
         let base_dirs = xdg::BaseDirectories::with_prefix(APP_DIR_NAME)
             .map_err(|e| ConfigError::XdgError(e.to_string()))?;
 
@@ -86,11 +86,11 @@ impl Config {
         if path.exists() {
             Self::load_from_file(path)
         } else {
-            Ok(Config::default())
+            Ok(Self::default())
         }
     }
 
-    fn load_from_file(path: PathBuf) -> Result<Config, ConfigError> {
+    fn load_from_file(path: PathBuf) -> Result<Self, ConfigError> {
         let content = std::fs::read_to_string(path).map_err(ConfigError::IoError)?;
 
         toml::from_str(&content).map_err(ConfigError::ParseError)

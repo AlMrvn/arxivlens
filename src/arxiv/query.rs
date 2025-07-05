@@ -56,14 +56,14 @@ impl SearchQuery {
     /// string.
     fn category(&self) -> &'static str {
         match self {
-            SearchQuery::Title(_) => "ti",
-            SearchQuery::Author(_) => "au",
-            SearchQuery::Abstract(_) => "abs",
-            SearchQuery::Comment(_) => "cm",
-            SearchQuery::JournalReference(_) => "jr",
-            SearchQuery::Category(_) => "cat",
-            SearchQuery::ReportNumber(_) => "rn",
-            SearchQuery::All(_) => "all",
+            Self::Title(_) => "ti",
+            Self::Author(_) => "au",
+            Self::Abstract(_) => "abs",
+            Self::Comment(_) => "cm",
+            Self::JournalReference(_) => "jr",
+            Self::Category(_) => "cat",
+            Self::ReportNumber(_) => "rn",
+            Self::All(_) => "all",
         }
     }
 }
@@ -71,14 +71,14 @@ impl SearchQuery {
 impl Display for SearchQuery {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            SearchQuery::Title(term) => write!(f, "{}", term),
-            SearchQuery::Author(term) => write!(f, "{}", term),
-            SearchQuery::Abstract(term) => write!(f, "{}", term),
-            SearchQuery::Comment(term) => write!(f, "{}", term),
-            SearchQuery::JournalReference(term) => write!(f, "{}", term),
-            SearchQuery::Category(term) => write!(f, "{}", term),
-            SearchQuery::ReportNumber(term) => write!(f, "{}", term),
-            SearchQuery::All(term) => write!(f, "{}", term),
+            Self::Title(term) => write!(f, "{term}"),
+            Self::Author(term) => write!(f, "{term}"),
+            Self::Abstract(term) => write!(f, "{term}"),
+            Self::Comment(term) => write!(f, "{term}"),
+            Self::JournalReference(term) => write!(f, "{term}"),
+            Self::Category(term) => write!(f, "{term}"),
+            Self::ReportNumber(term) => write!(f, "{term}"),
+            Self::All(term) => write!(f, "{term}"),
         }
     }
 }
@@ -99,12 +99,12 @@ fn group_and_join_queries(search_queries: &[SearchQuery]) -> String {
         grouped_queries
             .entry(query.category())
             .or_default()
-            .push(format!("{}", query));
+            .push(format!("{query}"));
     }
 
     let mut joined_query: Vec<String> = Vec::new();
     for (category, category_queries) in grouped_queries.iter_mut() {
-        let mut category_query = format!("{}:", category);
+        let mut category_query = format!("{category}:");
         category_query.push_str(&category_queries.join("+AND+"));
         joined_query.push(category_query);
     }
@@ -130,9 +130,9 @@ impl Display for SortBy {
             f,
             "{}",
             match self {
-                SortBy::Relevance => "relevance",
-                SortBy::LastUpdatedDate => "lastUpdatedDate",
-                SortBy::SubmittedDate => "submittedDate",
+                Self::Relevance => "relevance",
+                Self::LastUpdatedDate => "lastUpdatedDate",
+                Self::SubmittedDate => "submittedDate",
             }
         )
     }
@@ -144,8 +144,8 @@ impl Display for SortOrder {
             f,
             "{}",
             match self {
-                SortOrder::Ascending => "ascending",
-                SortOrder::Descending => "descending",
+                Self::Ascending => "ascending",
+                Self::Descending => "descending",
             }
         )
     }
@@ -184,18 +184,18 @@ pub fn get_search_query(
     }
 
     if let Some(start) = start_index {
-        query.push(format!("start={}", start))
+        query.push(format!("start={start}"))
     }
 
     if let Some(max_res) = max_results {
-        query.push(format!("max_results={}", max_res))
+        query.push(format!("max_results={max_res}"))
     }
 
     if let Some(sort_by) = sort_by {
-        query.push(format!("sortBy={}", sort_by))
+        query.push(format!("sortBy={sort_by}"))
     }
     if let Some(sort_order) = sort_order {
-        query.push(format!("sortOrder={}", sort_order))
+        query.push(format!("sortOrder={sort_order}"))
     }
 
     if query.is_empty() {
@@ -239,7 +239,7 @@ pub fn get_query_url(
         sort_by,
         sort_order,
     );
-    format!("{}{}", ARXIV_QUERY_BASE_URL, search_query)
+    format!("{ARXIV_QUERY_BASE_URL}{search_query}")
 }
 
 /// Query arXiv with the query url.

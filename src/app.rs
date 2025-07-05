@@ -151,7 +151,7 @@ impl App<'_> {
                 .render(frame, frame.size(), &self.theme, &self.config)
             {
                 // Log the error but don't crash
-                eprintln!("Error rendering config popup: {}", e);
+                eprintln!("Error rendering config popup: {e}");
             }
         }
     }

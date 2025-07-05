@@ -33,7 +33,7 @@ fn main() -> AppResult<()> {
     // --- Construct the arXiv query with the user args ---
     let args = Args::parse();
     let config =
-        config::Config::load().map_err(|e| format!("Failed to load configuration: {}", e))?;
+        config::Config::load().map_err(|e| format!("Failed to load configuration: {e}"))?;
 
     // TODO: Get the them out of the config:
     let theme = Theme::default();
