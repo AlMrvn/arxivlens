@@ -127,10 +127,10 @@ impl ArxivQueryResult {
             Err(error) => panic!("Problem while querying arXiv: {error:?}"),
         };
         let xml_content = query_response.text().unwrap_or_else(|e| {
-            eprintln!("Request failed: {}", e);
+            eprintln!("Request failed: {e}");
             std::process::exit(1);
         });
-        ArxivQueryResult::from_xml_content(&xml_content)
+        Self::from_xml_content(&xml_content)
     }
 }
 
