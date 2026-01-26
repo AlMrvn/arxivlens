@@ -4,13 +4,14 @@
 //! XML string obtained from the query of the arXiv API.
 
 use minidom::Element;
-use std::error::Error;
+use serde::{Deserialize, Serialize};
+use thiserror::Error;
 
 use crate::search_highlight::search_patterns;
 
 const ENTRY_NS: &str = "http://www.w3.org/2005/Atom";
 
-#[derive(Debug, Default, PartialEq)]
+#[derive(Debug, Default, PartialEq, Serialize, Deserialize, Clone)]
 pub struct ArxivEntry {
     pub title: String,
     pub authors: Vec<String>,
@@ -56,8 +57,20 @@ impl ArxivEntry {
     }
 }
 
+#[derive(Debug, Error)]
+pub enum ArxivParsingError {
+    #[error("Failed to parse XML content: {0}")]
+    XmlParseError(String),
+    #[error("Missing required field: {field}")]
+    MissingField { field: String },
+    #[error("Network request failed: {0}")]
+    NetworkError(#[from] reqwest::Error),
+    #[error("XML parsing error: {0}")]
+    MinidomError(#[from] minidom::Error),
+}
+
 /// Helper function to extract the authors
-fn extract_authors(entry: &Element) -> Result<Vec<String>, Box<dyn Error>> {
+fn extract_authors(entry: &Element) -> Result<Vec<String>, ArxivParsingError> {
     let mut names: Vec<String> = Vec::new();
 
     // Since there are several child with the same name, we iterate over all of them:
@@ -72,94 +85,118 @@ fn extract_authors(entry: &Element) -> Result<Vec<String>, Box<dyn Error>> {
 }
 
 /// Storing the result of the arxiv query
-#[derive(Debug, Default, PartialEq)]
+#[derive(Debug, Default, PartialEq, Serialize, Deserialize, Clone)]
 pub struct ArxivQueryResult {
     pub updated: String,
     pub articles: Vec<ArxivEntry>,
 }
 
 impl ArxivQueryResult {
-    pub fn from_xml_content(content: &str) -> Self {
-        let root: Element = content.parse().unwrap();
+    pub fn from_xml_content(content: &str) -> Result<Self, ArxivParsingError> {
+        let root: Element = content
+            .parse()
+            .map_err(|e| ArxivParsingError::XmlParseError(format!("Failed to parse XML: {e}")))?;
 
         // Find the updated
-        let query_update = root.get_child("updated", ENTRY_NS).unwrap().text();
+        let query_update = root
+            .get_child("updated", ENTRY_NS)
+            .ok_or_else(|| ArxivParsingError::MissingField {
+                field: "updated".to_string(),
+            })?
+            .text();
 
         let mut articles: Vec<ArxivEntry> = Vec::new();
 
         for child in root.children() {
             if child.is("entry", ENTRY_NS) {
                 // Extract the main information
-                let title = child.get_child("title", ENTRY_NS).unwrap().text();
-                let id = child.get_child("id", ENTRY_NS).unwrap().text();
-                let summary = child.get_child("summary", ENTRY_NS).unwrap().text();
-                let updated = child.get_child("updated", ENTRY_NS).unwrap().text();
-                let published = child.get_child("published", ENTRY_NS).unwrap().text();
+                let title = child
+                    .get_child("title", ENTRY_NS)
+                    .ok_or_else(|| ArxivParsingError::MissingField {
+                        field: "title".to_string(),
+                    })?
+                    .text();
+                let id = child
+                    .get_child("id", ENTRY_NS)
+                    .ok_or_else(|| ArxivParsingError::MissingField {
+                        field: "id".to_string(),
+                    })?
+                    .text();
+                let summary = child
+                    .get_child("summary", ENTRY_NS)
+                    .ok_or_else(|| ArxivParsingError::MissingField {
+                        field: "summary".to_string(),
+                    })?
+                    .text();
+                let updated = child
+                    .get_child("updated", ENTRY_NS)
+                    .ok_or_else(|| ArxivParsingError::MissingField {
+                        field: "updated".to_string(),
+                    })?
+                    .text();
+                let published = child
+                    .get_child("published", ENTRY_NS)
+                    .ok_or_else(|| ArxivParsingError::MissingField {
+                        field: "published".to_string(),
+                    })?
+                    .text();
 
                 // Extract the authors which have one more depth.
-                let authors = match extract_authors(child) {
-                    Ok(auths) => auths,
-                    Err(_) => vec!["Error while parsing authors names".to_string()],
-                };
+                let authors = extract_authors(child)?;
 
                 // Only add the new entry, ie published == updated
                 if updated.as_str() == published.as_str() {
                     articles.push(ArxivEntry::new(
-                        title.replace("\n ", "").to_owned(), // arxiv has this formatting
-                        authors.to_owned(),
-                        summary.replace('\n', " ").to_owned(),
-                        id.to_owned(),
-                        updated.to_owned(),
-                        published.to_owned(),
+                        title.replace("\n ", ""), // arxiv has this formatting
+                        authors,
+                        summary.replace('\n', " "),
+                        id,
+                        updated,
+                        published,
                     ));
                 }
             }
         }
-        let articles = articles;
-        Self {
+        Ok(Self {
             updated: query_update,
             articles,
-        }
+        })
     }
-    pub fn from_query(query: String) -> Self {
-        let query_response = match reqwest::blocking::get(query) {
-            Ok(content) => content,
-            Err(error) => panic!("Problem while querying arXiv: {error:?}"),
-        };
-        let xml_content = query_response.text().unwrap_or_else(|e| {
-            eprintln!("Request failed: {e}");
-            std::process::exit(1);
-        });
+    pub fn from_query(query: String) -> Result<Self, ArxivParsingError> {
+        let query_response = reqwest::blocking::get(query)?;
+        let xml_content = query_response.text()?;
         Self::from_xml_content(&xml_content)
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use std::fs;
+    use std::path::PathBuf;
     use std::str::FromStr;
 
     use super::*;
 
+    fn load_fixture(name: &str) -> String {
+        let mut fixture_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        fixture_path.push("tests");
+        fixture_path.push("fixtures");
+        fixture_path.push(name);
+
+        fs::read_to_string(&fixture_path)
+            .unwrap_or_else(|_| panic!("Failed to read fixture file: {}", fixture_path.display()))
+    }
+
     #[test]
-    fn test_extract_authors() -> Result<(), Box<dyn Error>> {
-        let author_element = Element::from_str(
-            r#"<?xml version="1.0" encoding="UTF-8"?>
-            <feed xmlns="http://www.w3.org/2005/Atom">
-              <author>
-                <name>Author Name 1</name>
-               </author>
-               <author>
-                <name>Author Name 2, Second</name>
-              </author>
-              </feed>
-              "#,
-        );
+    fn test_extract_authors() -> Result<(), ArxivParsingError> {
+        let xml_content = load_fixture("authors_sample.xml");
+        let author_element = Element::from_str(&xml_content)?;
 
         let expected_authors = vec![
             String::from("Author Name 1"),
             String::from("Author Name 2, Second"),
         ];
-        let extracted_authors = extract_authors(&author_element?)?;
+        let extracted_authors = extract_authors(&author_element)?;
 
         assert_eq!(expected_authors, extracted_authors);
 
@@ -167,14 +204,11 @@ mod tests {
     }
 
     #[test]
-    fn test_empty_author_list() -> Result<(), Box<dyn Error>> {
-        let author_element = Element::from_str(
-            r#"<?xml version="1.0" encoding="UTF-8"?>
-            <feed xmlns="http://www.w3.org/2005/Atom">
-            </feed>"#,
-        );
+    fn test_empty_author_list() -> Result<(), ArxivParsingError> {
+        let xml_content = load_fixture("empty_authors.xml");
+        let author_element = Element::from_str(&xml_content)?;
 
-        let extracted_authors = extract_authors(&author_element?)?;
+        let extracted_authors = extract_authors(&author_element)?;
         assert!(extracted_authors.is_empty());
         Ok(())
     }
@@ -236,41 +270,8 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_arxiv_entries() -> Result<(), Box<dyn Error>> {
-        let xml_content = r#"<?xml version="1.0" encoding="UTF-8"?>
-            <feed xmlns="http://www.w3.org/2005/Atom">
-              <link href="http://arxiv.org/api/query?search_query=fake%3Atopic&amp;id_list=&amp;start=0&amp;max_results=20" rel="self" type="application/atom+xml"/>
-              <title type="html">ArXiv Query: search_query=fake:topic&amp;id_list=&amp;start=0&amp;max_results=20</title>
-              <id>http://arxiv.org/api/FAKESAMPLEID</id>
-              <updated>2024-07-09T20:00:00Z</updated>
-              <opensearch:totalResults xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/">10</opensearch:totalResults>
-              <opensearch:startIndex xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/">0</opensearch:startIndex>
-              <opensearch:itemsPerPage xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/">20</opensearch:itemsPerPage>
-              <entry>
-                <id>http://arxiv.org/abs/9876.54321</id>
-                <updated>2023-12-31T23:59:59Z</updated>
-                <published>2023-12-31T23:59:59Z</published>
-                <title>Sample Title 1</title>
-                <summary>This is a summary for the first fake entry used for testing purposes.</summary>
-                <author>
-                  <name>Author One</name>
-                </author>
-                <author>
-                  <name>Author Two</name>
-                </author>
-              </entry>
-              <entry>
-                <id>http://arxiv.org/abs/1212.34567</id>
-                <updated>2024-01-01T00:00:00Z</updated>
-                <published>2024-01-01T00:00:00Z</published>
-                <title>Sample Title 2</title>
-                <summary>This is a sample summary for the second entry.</summary>
-                <author>
-                  <name>Author Three</name>
-                </author>
-              </entry>
-            </feed>  "#
-        .to_string();
+    fn test_parse_arxiv_entries() -> Result<(), ArxivParsingError> {
+        let xml_content = load_fixture("sample_arxiv.xml");
         let expected_result = ArxivQueryResult {
             updated: "2024-07-09T20:00:00Z".to_string(),
             articles: vec![
@@ -297,10 +298,33 @@ mod tests {
             ],
         };
 
-        let actual_result = ArxivQueryResult::from_xml_content(&xml_content);
+        let actual_result = ArxivQueryResult::from_xml_content(&xml_content)?;
 
         assert_eq!(expected_result, actual_result);
 
         Ok(())
+    }
+
+    #[test]
+    fn test_truncated_xml() {
+        let xml_content = load_fixture("sample_arxiv.xml");
+        // Cut the XML roughly in half, mid-tag to create malformed XML
+        let truncated_xml = &xml_content[..xml_content.len() / 2];
+
+        let result = ArxivQueryResult::from_xml_content(truncated_xml);
+
+        // Should return an error, not crash
+        assert!(result.is_err());
+
+        // Verify it's specifically a parsing error
+        match result {
+            Err(ArxivParsingError::XmlParseError(_)) => {
+                // This is what we expect
+            }
+            Err(ArxivParsingError::MinidomError(_)) => {
+                // This is also acceptable since minidom might catch it first
+            }
+            _ => panic!("Expected XML parsing error, got: {:?}", result),
+        }
     }
 }

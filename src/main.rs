@@ -58,7 +58,8 @@ fn main() -> AppResult<()> {
         Some(DEFAULT_SORT_BY),
         Some(DEFAULT_SORT_ORDER),
     );
-    let query_result = ArxivQueryResult::from_query(query);
+    let query_result =
+        ArxivQueryResult::from_query(query).map_err(|e| format!("Failed to query arXiv: {e}"))?;
 
     // Create a longer-lived value for the highlight config
     let highlight_config = config.highlight.clone();

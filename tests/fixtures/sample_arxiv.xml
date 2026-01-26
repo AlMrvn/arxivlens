@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <link href="http://arxiv.org/api/query?search_query=fake%3Atopic&amp;id_list=&amp;start=0&amp;max_results=20" rel="self" type="application/atom+xml"/>
+  <title type="html">ArXiv Query: search_query=fake:topic&amp;id_list=&amp;start=0&amp;max_results=20</title>
+  <id>http://arxiv.org/api/FAKESAMPLEID</id>
+  <updated>2024-07-09T20:00:00Z</updated>
+  <opensearch:totalResults xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/">10</opensearch:totalResults>
+  <opensearch:startIndex xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/">0</opensearch:startIndex>
+  <opensearch:itemsPerPage xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/">20</opensearch:itemsPerPage>
+  <entry>
+    <id>http://arxiv.org/abs/9876.54321</id>
+    <updated>2023-12-31T23:59:59Z</updated>
+    <published>2023-12-31T23:59:59Z</published>
+    <title>Sample Title 1</title>
+    <summary>This is a summary for the first fake entry used for testing purposes.</summary>
+    <author>
+      <name>Author One</name>
+    </author>
+    <author>
+      <name>Author Two</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/1212.34567</id>
+    <updated>2024-01-01T00:00:00Z</updated>
+    <published>2024-01-01T00:00:00Z</published>
+    <title>Sample Title 2</title>
+    <summary>This is a sample summary for the second entry.</summary>
+    <author>
+      <name>Author Three</name>
+    </author>
+  </entry>
+</feed>
