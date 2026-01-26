@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <author>
+    <name>Author Name 1</name>
+   </author>
+   <author>
+    <name>Author Name 2, Second</name>
+  </author>
+</feed>

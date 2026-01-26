@@ -32,7 +32,6 @@ pub struct App<'a> {
     pub config: Config,
 }
 
-
 impl<'a> App<'a> {
     pub fn new(
         query_result: &'a ArxivQueryResult,

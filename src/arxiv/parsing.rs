@@ -171,24 +171,26 @@ impl ArxivQueryResult {
 
 #[cfg(test)]
 mod tests {
+    use std::fs;
+    use std::path::PathBuf;
     use std::str::FromStr;
 
     use super::*;
 
+    fn load_fixture(name: &str) -> String {
+        let mut fixture_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        fixture_path.push("tests");
+        fixture_path.push("fixtures");
+        fixture_path.push(name);
+
+        fs::read_to_string(&fixture_path)
+            .unwrap_or_else(|_| panic!("Failed to read fixture file: {}", fixture_path.display()))
+    }
+
     #[test]
     fn test_extract_authors() -> Result<(), ArxivParsingError> {
-        let author_element = Element::from_str(
-            r#"<?xml version="1.0" encoding="UTF-8"?>
-            <feed xmlns="http://www.w3.org/2005/Atom">
-              <author>
-                <name>Author Name 1</name>
-               </author>
-               <author>
-                <name>Author Name 2, Second</name>
-              </author>
-              </feed>
-              "#,
-        )?;
+        let xml_content = load_fixture("authors_sample.xml");
+        let author_element = Element::from_str(&xml_content)?;
 
         let expected_authors = vec![
             String::from("Author Name 1"),
@@ -203,11 +205,8 @@ mod tests {
 
     #[test]
     fn test_empty_author_list() -> Result<(), ArxivParsingError> {
-        let author_element = Element::from_str(
-            r#"<?xml version="1.0" encoding="UTF-8"?>
-            <feed xmlns="http://www.w3.org/2005/Atom">
-            </feed>"#,
-        )?;
+        let xml_content = load_fixture("empty_authors.xml");
+        let author_element = Element::from_str(&xml_content)?;
 
         let extracted_authors = extract_authors(&author_element)?;
         assert!(extracted_authors.is_empty());
@@ -272,40 +271,7 @@ mod tests {
 
     #[test]
     fn test_parse_arxiv_entries() -> Result<(), ArxivParsingError> {
-        let xml_content = r#"<?xml version="1.0" encoding="UTF-8"?>
-            <feed xmlns="http://www.w3.org/2005/Atom">
-              <link href="http://arxiv.org/api/query?search_query=fake%3Atopic&amp;id_list=&amp;start=0&amp;max_results=20" rel="self" type="application/atom+xml"/>
-              <title type="html">ArXiv Query: search_query=fake:topic&amp;id_list=&amp;start=0&amp;max_results=20</title>
-              <id>http://arxiv.org/api/FAKESAMPLEID</id>
-              <updated>2024-07-09T20:00:00Z</updated>
-              <opensearch:totalResults xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/">10</opensearch:totalResults>
-              <opensearch:startIndex xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/">0</opensearch:startIndex>
-              <opensearch:itemsPerPage xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/">20</opensearch:itemsPerPage>
-              <entry>
-                <id>http://arxiv.org/abs/9876.54321</id>
-                <updated>2023-12-31T23:59:59Z</updated>
-                <published>2023-12-31T23:59:59Z</published>
-                <title>Sample Title 1</title>
-                <summary>This is a summary for the first fake entry used for testing purposes.</summary>
-                <author>
-                  <name>Author One</name>
-                </author>
-                <author>
-                  <name>Author Two</name>
-                </author>
-              </entry>
-              <entry>
-                <id>http://arxiv.org/abs/1212.34567</id>
-                <updated>2024-01-01T00:00:00Z</updated>
-                <published>2024-01-01T00:00:00Z</published>
-                <title>Sample Title 2</title>
-                <summary>This is a sample summary for the second entry.</summary>
-                <author>
-                  <name>Author Three</name>
-                </author>
-              </entry>
-            </feed>  "#
-        .to_string();
+        let xml_content = load_fixture("sample_arxiv.xml");
         let expected_result = ArxivQueryResult {
             updated: "2024-07-09T20:00:00Z".to_string(),
             articles: vec![
@@ -337,5 +303,28 @@ mod tests {
         assert_eq!(expected_result, actual_result);
 
         Ok(())
+    }
+
+    #[test]
+    fn test_truncated_xml() {
+        let xml_content = load_fixture("sample_arxiv.xml");
+        // Cut the XML roughly in half, mid-tag to create malformed XML
+        let truncated_xml = &xml_content[..xml_content.len() / 2];
+
+        let result = ArxivQueryResult::from_xml_content(truncated_xml);
+
+        // Should return an error, not crash
+        assert!(result.is_err());
+
+        // Verify it's specifically a parsing error
+        match result {
+            Err(ArxivParsingError::XmlParseError(_)) => {
+                // This is what we expect
+            }
+            Err(ArxivParsingError::MinidomError(_)) => {
+                // This is also acceptable since minidom might catch it first
+            }
+            _ => panic!("Expected XML parsing error, got: {:?}", result),
+        }
     }
 }
