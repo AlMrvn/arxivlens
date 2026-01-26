@@ -18,15 +18,17 @@
 //!
 //! [`arXiv API`] : https://info.arxiv.org/help/api/user-manual.html
 
+use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
-use std::error::Error;
 use std::fmt::Display;
+use thiserror::Error;
 
 const ARXIV_QUERY_BASE_URL: &str = "http://export.arxiv.org/api/query?";
 
 // --- Construct the search query ---
 
 /// Specifies different query options for searching the arXiv archive.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum SearchQuery {
     /// Search for articles by title.
     Title(String),
@@ -113,12 +115,14 @@ fn group_and_join_queries(search_queries: &[SearchQuery]) -> String {
 
 // --- Option for the query ---
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum SortBy {
     Relevance,
     LastUpdatedDate,
     SubmittedDate,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum SortOrder {
     Ascending,
     Descending,
@@ -242,6 +246,12 @@ pub fn get_query_url(
     format!("{ARXIV_QUERY_BASE_URL}{search_query}")
 }
 
+#[derive(Debug, Error)]
+pub enum ArxivQueryError {
+    #[error("Network request failed: {0}")]
+    NetworkError(#[from] reqwest::Error),
+}
+
 /// Query arXiv with the query url.
 pub fn query_arxiv(
     search_queries: Option<&[SearchQuery]>,
@@ -249,7 +259,7 @@ pub fn query_arxiv(
     max_results: Option<i32>,
     sort_by: Option<SortBy>,
     sort_order: Option<SortOrder>,
-) -> Result<String, Box<dyn Error>> {
+) -> Result<String, ArxivQueryError> {
     let query_str = get_query_url(
         search_queries,
         start_index,

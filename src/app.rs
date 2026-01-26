@@ -1,6 +1,6 @@
 use crate::arxiv::ArxivQueryResult;
 use crate::config::{Config, HighlightConfig};
-use crate::ui::{ArticleDetails, ArticleFeed, ConfigPopup, Theme};
+use crate::ui::{option_vec_to_option_slice, ArticleDetails, ArticleFeed, ConfigPopup, Theme};
 use arboard::Clipboard;
 use std::error::Error;
 
@@ -32,12 +32,6 @@ pub struct App<'a> {
     pub config: Config,
 }
 
-fn option_vec_to_option_slice(option_vec: &Option<Vec<String>>) -> Option<Vec<&str>> {
-    let binding = option_vec
-        .as_deref()
-        .map(|v| v.iter().map(String::as_str).collect::<Vec<&str>>());
-    binding
-}
 
 impl<'a> App<'a> {
     pub fn new(

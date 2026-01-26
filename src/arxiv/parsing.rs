@@ -4,13 +4,14 @@
 //! XML string obtained from the query of the arXiv API.
 
 use minidom::Element;
-use std::error::Error;
+use serde::{Deserialize, Serialize};
+use thiserror::Error;
 
 use crate::search_highlight::search_patterns;
 
 const ENTRY_NS: &str = "http://www.w3.org/2005/Atom";
 
-#[derive(Debug, Default, PartialEq)]
+#[derive(Debug, Default, PartialEq, Serialize, Deserialize, Clone)]
 pub struct ArxivEntry {
     pub title: String,
     pub authors: Vec<String>,
@@ -56,8 +57,20 @@ impl ArxivEntry {
     }
 }
 
+#[derive(Debug, Error)]
+pub enum ArxivParsingError {
+    #[error("Failed to parse XML content: {0}")]
+    XmlParseError(String),
+    #[error("Missing required field: {field}")]
+    MissingField { field: String },
+    #[error("Network request failed: {0}")]
+    NetworkError(#[from] reqwest::Error),
+    #[error("XML parsing error: {0}")]
+    MinidomError(#[from] minidom::Error),
+}
+
 /// Helper function to extract the authors
-fn extract_authors(entry: &Element) -> Result<Vec<String>, Box<dyn Error>> {
+fn extract_authors(entry: &Element) -> Result<Vec<String>, ArxivParsingError> {
     let mut names: Vec<String> = Vec::new();
 
     // Since there are several child with the same name, we iterate over all of them:
@@ -72,64 +85,86 @@ fn extract_authors(entry: &Element) -> Result<Vec<String>, Box<dyn Error>> {
 }
 
 /// Storing the result of the arxiv query
-#[derive(Debug, Default, PartialEq)]
+#[derive(Debug, Default, PartialEq, Serialize, Deserialize, Clone)]
 pub struct ArxivQueryResult {
     pub updated: String,
     pub articles: Vec<ArxivEntry>,
 }
 
 impl ArxivQueryResult {
-    pub fn from_xml_content(content: &str) -> Self {
-        let root: Element = content.parse().unwrap();
+    pub fn from_xml_content(content: &str) -> Result<Self, ArxivParsingError> {
+        let root: Element = content
+            .parse()
+            .map_err(|e| ArxivParsingError::XmlParseError(format!("Failed to parse XML: {e}")))?;
 
         // Find the updated
-        let query_update = root.get_child("updated", ENTRY_NS).unwrap().text();
+        let query_update = root
+            .get_child("updated", ENTRY_NS)
+            .ok_or_else(|| ArxivParsingError::MissingField {
+                field: "updated".to_string(),
+            })?
+            .text();
 
         let mut articles: Vec<ArxivEntry> = Vec::new();
 
         for child in root.children() {
             if child.is("entry", ENTRY_NS) {
                 // Extract the main information
-                let title = child.get_child("title", ENTRY_NS).unwrap().text();
-                let id = child.get_child("id", ENTRY_NS).unwrap().text();
-                let summary = child.get_child("summary", ENTRY_NS).unwrap().text();
-                let updated = child.get_child("updated", ENTRY_NS).unwrap().text();
-                let published = child.get_child("published", ENTRY_NS).unwrap().text();
+                let title = child
+                    .get_child("title", ENTRY_NS)
+                    .ok_or_else(|| ArxivParsingError::MissingField {
+                        field: "title".to_string(),
+                    })?
+                    .text();
+                let id = child
+                    .get_child("id", ENTRY_NS)
+                    .ok_or_else(|| ArxivParsingError::MissingField {
+                        field: "id".to_string(),
+                    })?
+                    .text();
+                let summary = child
+                    .get_child("summary", ENTRY_NS)
+                    .ok_or_else(|| ArxivParsingError::MissingField {
+                        field: "summary".to_string(),
+                    })?
+                    .text();
+                let updated = child
+                    .get_child("updated", ENTRY_NS)
+                    .ok_or_else(|| ArxivParsingError::MissingField {
+                        field: "updated".to_string(),
+                    })?
+                    .text();
+                let published = child
+                    .get_child("published", ENTRY_NS)
+                    .ok_or_else(|| ArxivParsingError::MissingField {
+                        field: "published".to_string(),
+                    })?
+                    .text();
 
                 // Extract the authors which have one more depth.
-                let authors = match extract_authors(child) {
-                    Ok(auths) => auths,
-                    Err(_) => vec!["Error while parsing authors names".to_string()],
-                };
+                let authors = extract_authors(child)?;
 
                 // Only add the new entry, ie published == updated
                 if updated.as_str() == published.as_str() {
                     articles.push(ArxivEntry::new(
-                        title.replace("\n ", "").to_owned(), // arxiv has this formatting
-                        authors.to_owned(),
-                        summary.replace('\n', " ").to_owned(),
-                        id.to_owned(),
-                        updated.to_owned(),
-                        published.to_owned(),
+                        title.replace("\n ", ""), // arxiv has this formatting
+                        authors,
+                        summary.replace('\n', " "),
+                        id,
+                        updated,
+                        published,
                     ));
                 }
             }
         }
-        let articles = articles;
-        Self {
+        Ok(Self {
             updated: query_update,
             articles,
-        }
+        })
     }
-    pub fn from_query(query: String) -> Self {
-        let query_response = match reqwest::blocking::get(query) {
-            Ok(content) => content,
-            Err(error) => panic!("Problem while querying arXiv: {error:?}"),
-        };
-        let xml_content = query_response.text().unwrap_or_else(|e| {
-            eprintln!("Request failed: {e}");
-            std::process::exit(1);
-        });
+    pub fn from_query(query: String) -> Result<Self, ArxivParsingError> {
+        let query_response = reqwest::blocking::get(query)?;
+        let xml_content = query_response.text()?;
         Self::from_xml_content(&xml_content)
     }
 }
@@ -141,7 +176,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_extract_authors() -> Result<(), Box<dyn Error>> {
+    fn test_extract_authors() -> Result<(), ArxivParsingError> {
         let author_element = Element::from_str(
             r#"<?xml version="1.0" encoding="UTF-8"?>
             <feed xmlns="http://www.w3.org/2005/Atom">
@@ -153,13 +188,13 @@ mod tests {
               </author>
               </feed>
               "#,
-        );
+        )?;
 
         let expected_authors = vec![
             String::from("Author Name 1"),
             String::from("Author Name 2, Second"),
         ];
-        let extracted_authors = extract_authors(&author_element?)?;
+        let extracted_authors = extract_authors(&author_element)?;
 
         assert_eq!(expected_authors, extracted_authors);
 
@@ -167,14 +202,14 @@ mod tests {
     }
 
     #[test]
-    fn test_empty_author_list() -> Result<(), Box<dyn Error>> {
+    fn test_empty_author_list() -> Result<(), ArxivParsingError> {
         let author_element = Element::from_str(
             r#"<?xml version="1.0" encoding="UTF-8"?>
             <feed xmlns="http://www.w3.org/2005/Atom">
             </feed>"#,
-        );
+        )?;
 
-        let extracted_authors = extract_authors(&author_element?)?;
+        let extracted_authors = extract_authors(&author_element)?;
         assert!(extracted_authors.is_empty());
         Ok(())
     }
@@ -236,7 +271,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_arxiv_entries() -> Result<(), Box<dyn Error>> {
+    fn test_parse_arxiv_entries() -> Result<(), ArxivParsingError> {
         let xml_content = r#"<?xml version="1.0" encoding="UTF-8"?>
             <feed xmlns="http://www.w3.org/2005/Atom">
               <link href="http://arxiv.org/api/query?search_query=fake%3Atopic&amp;id_list=&amp;start=0&amp;max_results=20" rel="self" type="application/atom+xml"/>
@@ -297,7 +332,7 @@ mod tests {
             ],
         };
 
-        let actual_result = ArxivQueryResult::from_xml_content(&xml_content);
+        let actual_result = ArxivQueryResult::from_xml_content(&xml_content)?;
 
         assert_eq!(expected_result, actual_result);
 
