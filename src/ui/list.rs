@@ -12,6 +12,7 @@ use ratatui::{
 pub struct ArticleFeed<'a> {
     items: List<'a>,
     pub state: ListState,
+    pub len: usize,
 }
 
 impl ArticleFeed<'_> {
@@ -20,6 +21,8 @@ impl ArticleFeed<'_> {
         highlight_authors: Option<&[&str]>,
         theme: &Theme,
     ) -> Self {
+        let entry_count = query_result.articles.len();
+
         let items: Vec<ListItem> = query_result
             .articles
             .iter()
@@ -54,10 +57,15 @@ impl ArticleFeed<'_> {
         Self {
             items,
             state: ListState::default(),
+            len: entry_count,
         }
     }
 
     pub fn render(&mut self, frame: &mut Frame, area: Rect) {
         frame.render_stateful_widget(&self.items, area, &mut self.state);
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len == 0
     }
 }

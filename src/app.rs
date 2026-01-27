@@ -10,6 +10,8 @@ use ratatui::{
     Frame,
 };
 
+pub mod actions;
+
 /// Application result type.
 pub type AppResult<T> = std::result::Result<T, Box<dyn Error>>;
 
@@ -75,11 +77,45 @@ impl App<'_> {
     }
 
     pub fn select_first(&mut self) {
-        self.article_feed.state.select_first();
+        if self.article_feed.len > 0 {
+            self.article_feed.state.select(Some(0));
+        }
     }
 
     pub fn select_last(&mut self) {
-        self.article_feed.state.select_last();
+        if self.article_feed.len > 0 {
+            // Safe from underflow because we checked len > 0
+            self.article_feed
+                .state
+                .select(Some(self.article_feed.len - 1));
+        }
+    }
+
+    /// Scroll down by a specified number of steps
+    pub fn scroll_down(&mut self, step: usize) {
+        if self.article_feed.len == 0 {
+            return;
+        }
+        let current = self.article_feed.state.selected().unwrap_or(0);
+        let new_index = (current + step).min(self.article_feed.len - 1);
+        self.article_feed.state.select(Some(new_index));
+    }
+
+    /// Scroll up by a specified number of steps
+    pub fn scroll_up(&mut self, step: usize) {
+        if self.article_feed.len == 0 {
+            return;
+        }
+
+        let current = self.article_feed.state.selected().unwrap_or(0);
+        let new_index = current.saturating_sub(step);
+
+        self.article_feed.state.select(Some(new_index));
+    }
+
+    /// Get the currently selected index for testing
+    pub fn selected_index(&self) -> Option<usize> {
+        self.article_feed.state.selected()
     }
 
     pub fn yank_id(&mut self) {
@@ -147,5 +183,69 @@ impl App<'_> {
                 eprintln!("Error rendering config popup: {e}");
             }
         }
+    }
+}
+
+#[cfg(test)]
+pub mod tests {
+    use super::*;
+
+    pub fn create_test_app() -> App<'static> {
+        use crate::app::HighlightConfig;
+        use crate::arxiv::ArxivQueryResult;
+        use std::sync::OnceLock;
+
+        static RESULTS: OnceLock<ArxivQueryResult> = OnceLock::new();
+        static HIGHLIGHT: OnceLock<HighlightConfig> = OnceLock::new();
+
+        let results = RESULTS.get_or_init(|| {
+            let mut entries = Vec::new();
+
+            for i in 1..=5 {
+                let mut entry = crate::arxiv::ArxivEntry::default();
+                entry.title = format!("Paper {}", i);
+                entry.authors = vec!["Alice".into()];
+                entries.push(entry);
+            }
+
+            ArxivQueryResult {
+                articles: entries,
+                ..Default::default()
+            }
+        });
+
+        let highlight = HIGHLIGHT.get_or_init(|| {
+            HighlightConfig {
+                // Option expects Some(Vec<String>)
+                authors: Some(vec!["Alice".into()]),
+                keywords: Some(vec!["TUI".into()]),
+            }
+        });
+
+        App::new(
+            results,
+            highlight,
+            crate::app::Theme::default(),
+            crate::app::Config::default(),
+        )
+    }
+    #[test]
+    fn test_app_creation() {
+        let app = create_test_app();
+        assert!(app.running);
+        assert_eq!(app.query_result.articles.len(), 5);
+    }
+
+    #[test]
+    fn test_scroll_methods() {
+        let mut app = create_test_app();
+
+        // Test scroll down
+        app.scroll_down(2);
+        assert_eq!(app.selected_index(), Some(2));
+
+        // Test scroll up
+        app.scroll_up(1);
+        assert_eq!(app.selected_index(), Some(1));
     }
 }
