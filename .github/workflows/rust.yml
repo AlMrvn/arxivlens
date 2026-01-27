@@ -39,11 +39,16 @@ jobs:
     - name: Build
       run: cargo build --verbose
 
-    # --- ARCHITECTURE LINT ---
+    # --- ARCHITECTURE LINT ---#
+    # We pin the version and use --locked to ensure CI stability across 
+    # different Rust toolchains (e.g., local 1.85 vs GitHub 1.86+).
+    # This prevents 'dependency drift' where sub-dependencies of cargo-modules
+    # might suddenly require a newer rustc than what we are using.
     - name: Install cargo-modules
-      run: cargo install cargo-modules --no-default-features
+      run: cargo install cargo-modules --version 0.23.1 --no-default-features --locked
     
     - name: Verify API/UI Separation
       run: |
-        # Fails if 'arxiv' (data) imports from 'ui' (presentation)
+        # If 'arxiv' (data layer) tries to import from 'ui' (presentation), 
+        # grep finds the path, returns 0, and ! flips it to a failure.
         ! cargo modules dependencies | grep "arxiv -> ui"
