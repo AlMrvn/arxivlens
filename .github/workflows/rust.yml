@@ -51,4 +51,5 @@ jobs:
       run: |
         # If 'arxiv' (data layer) tries to import from 'ui' (presentation), 
         # grep finds the path, returns 0, and ! flips it to a failure.
-        ! cargo modules dependencies | grep "arxiv -> ui"
+        # We add --lib so it knows to check the library target
+        ! cargo modules dependencies --lib | grep "arxiv -> ui"
