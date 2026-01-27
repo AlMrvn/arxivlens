@@ -25,9 +25,9 @@ impl ArticleFeed<'_> {
             .iter()
             .map(|entry| {
                 ListItem::from(entry.title.clone()).style(
-                    if highlight_authors.is_some_and(|patterns| {
-                        check_author_match(&entry.authors, patterns)
-                    }) {
+                    if highlight_authors
+                        .is_some_and(|patterns| check_author_match(&entry.authors, patterns))
+                    {
                         theme.title
                     } else {
                         theme.main
