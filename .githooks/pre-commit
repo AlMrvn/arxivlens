@@ -1,0 +1,41 @@
+
+#!/bin/sh
+echo "🛡️  Running pre-commit guards..."
+
+# 1. Check for cargo-modules dependency
+if ! command -v cargo-modules >/dev/null 2>&1; then
+    echo "⚠️  cargo-modules not found."
+    echo "Please run: cargo install cargo-modules --version 0.23.1 --no-default-features --locked"
+    exit 1
+fi
+
+# 2. Architecture Boundary Check
+echo "🔍 Checking architecture boundaries..."
+# We use the surgical regex to ensure logic doesn't touch UI
+if cargo modules dependencies --lib | grep -qE "arxivlens::arxiv.*->.*arxivlens::ui"; then
+    echo ""
+    echo "❌ ARCHITECTURE VIOLATION DETECTED"
+    echo "--------------------------------------------------------"
+    echo "The 'arxiv' module is attempting to use the 'ui' module."
+    echo "This breaks the unidirectional dependency rule: Logic cannot depend on UI."
+    echo "--------------------------------------------------------"
+    echo "Offending link:"
+    cargo modules dependencies --lib | grep -E "arxivlens::arxiv.*->.*arxivlens::ui"
+    exit 1
+fi
+echo "✅ Architecture boundaries respected."
+
+# 3. Style Check (Fast)
+echo "🎨 Checking formatting..."
+cargo fmt -- --check || { echo "❌ Format check failed. Run 'cargo fmt'."; exit 1; }
+
+# 4. Linting (Medium)
+echo "📎 Running Clippy..."
+cargo clippy -- -D warnings || { echo "❌ Clippy failed."; exit 1; }
+
+# 5. Functional Testing (Heavy)
+echo "🧪 Running tests..."
+cargo test || { echo "❌ Tests failed."; exit 1; }
+
+echo "🚀 All guards passed. Committing..."
+exit 0
