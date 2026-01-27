@@ -33,6 +33,12 @@ jobs:
     - name: Clippy
       run: cargo clippy -- -D warnings
 
+    - name: Run tests
+      run: cargo test --verbose
+
+    - name: Build
+      run: cargo build --verbose
+
     # --- ARCHITECTURE LINT ---
     - name: Install cargo-modules
       run: cargo install cargo-modules --no-default-features
