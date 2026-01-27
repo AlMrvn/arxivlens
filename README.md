@@ -132,5 +132,9 @@ src/
 ## Contributing
 Contributions are welcome! Please feel free to submit a Pull Request.
 
+## Development Setup
+To ensure code quality and architectural boundaries, please run:
+`git config core.hooksPath .githooks`
+
 ## License
 This project is licensed under the MIT license.
