@@ -13,9 +13,6 @@ pub mod tui;
 /// Event handler.
 pub mod handler;
 
-/// Searching keyword
-pub mod search_highlight;
-
 /// Handling config
 pub mod config;
 

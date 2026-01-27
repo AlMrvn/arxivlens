@@ -1,9 +1,19 @@
-//! Module for highligting keyword in a text.
+//! Module for highlighting keyword in a text.
 
 use aho_corasick::AhoCorasick;
 use ratatui::text::{Line, Span};
 
 use crate::ui::Theme;
+
+pub fn check_author_match(authors: &[String], patterns: &[&str]) -> bool {
+    if patterns.is_empty() {
+        return false;
+    }
+
+    let author_text = authors.join(", ");
+    let matches = search_patterns(&author_text, patterns);
+    !matches.is_empty()
+}
 
 pub fn search_patterns(text: &str, patterns: &[&str]) -> Vec<(usize, usize)> {
     let ac = AhoCorasick::builder()
