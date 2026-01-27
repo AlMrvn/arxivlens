@@ -30,6 +30,15 @@ jobs:
     - name: Check formatting
       run: cargo fmt --all -- --check
     
+    - name: Install cargo-modules
+      run: cargo install cargo-modules --version 0.23.1 --no-default-features --locked
+
+    - name: Verify API/UI Separation
+      run: |
+        # Fail if 'arxiv' logic layer attempts to import from 'ui' presentation layer.
+        # We use the regex discovered during terminal testing.
+        ! cargo modules dependencies --lib | grep -E "arxivlens::arxiv.*->.*arxivlens::ui"
+    
     - name: Clippy
       run: cargo clippy -- -D warnings
 
@@ -38,12 +47,3 @@ jobs:
 
     - name: Build
       run: cargo build --verbose
-
-    # --- ARCHITECTURE LINT ---
-    - name: Install cargo-modules
-      run: cargo install cargo-modules --no-default-features
-    
-    - name: Verify API/UI Separation
-      run: |
-        # Fails if 'arxiv' (data) imports from 'ui' (presentation)
-        ! cargo modules dependencies | grep "arxiv -> ui"
