@@ -1,4 +1,5 @@
 use crate::arxiv::ArxivQueryResult;
+use crate::ui::utils::check_author_match;
 use crate::ui::Theme;
 use ratatui::widgets::{List, ListState};
 use ratatui::{
@@ -24,7 +25,9 @@ impl ArticleFeed<'_> {
             .iter()
             .map(|entry| {
                 ListItem::from(entry.title.clone()).style(
-                    if entry.contains_author(highlight_authors) {
+                    if highlight_authors.map_or(false, |patterns| {
+                        check_author_match(&entry.authors, patterns)
+                    }) {
                         theme.title
                     } else {
                         theme.main

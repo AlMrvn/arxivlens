@@ -2,6 +2,7 @@ pub mod config_popup;
 pub mod detail;
 pub mod list;
 pub mod style;
+pub mod utils;
 
 pub use config_popup::ConfigPopup;
 pub use detail::ArticleDetails;

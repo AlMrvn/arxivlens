@@ -7,8 +7,6 @@ use minidom::Element;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use crate::search_highlight::search_patterns;
-
 const ENTRY_NS: &str = "http://www.w3.org/2005/Atom";
 
 #[derive(Debug, Default, PartialEq, Serialize, Deserialize, Clone)]
@@ -45,15 +43,6 @@ impl ArxivEntry {
 
     pub fn get_all_authors(&self) -> &str {
         &self.all_authors
-    }
-
-    pub fn contains_author(&self, author_patterns: Option<&[&str]>) -> bool {
-        if let Some(patterns) = author_patterns {
-            let matches = search_patterns(&self.all_authors, patterns);
-            !matches.is_empty()
-        } else {
-            false
-        }
     }
 }
 
@@ -223,36 +212,6 @@ mod tests {
 
         let result = Element::from_str(malformed_xml);
         assert!(result.is_err());
-    }
-
-    #[test]
-    fn test_arxiv_entry_contains_author() {
-        let entry = ArxivEntry::new(
-            "Test Title".to_string(),
-            vec!["John Doe".to_string(), "Jane Smith".to_string()],
-            "Test Summary".to_string(),
-            "test_id".to_string(),
-            "2024-03-28".to_string(),
-            "2024-03-28".to_string(),
-        );
-
-        // Test exact match
-        assert!(entry.contains_author(Some(&["John Doe"])));
-
-        // Test partial match
-        assert!(entry.contains_author(Some(&["Doe"])));
-
-        // Test case sensitivity
-        assert!(entry.contains_author(Some(&["john doe"])));
-
-        // Test no match
-        assert!(!entry.contains_author(Some(&["Albert Einstein"])));
-
-        // Test empty patterns
-        assert!(!entry.contains_author(Some(&[])));
-
-        // Test None patterns
-        assert!(!entry.contains_author(None));
     }
 
     #[test]

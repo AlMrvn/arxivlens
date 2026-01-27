@@ -1,6 +1,6 @@
+use super::utils::highlight_patterns;
 use crate::arxiv::ArxivEntry;
 use crate::config::HighlightConfig;
-use crate::search_highlight::highlight_patterns;
 use crate::ui::Theme;
 
 use super::option_vec_to_option_slice;
