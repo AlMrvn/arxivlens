@@ -30,6 +30,15 @@ jobs:
     - name: Check formatting
       run: cargo fmt --all -- --check
     
+    - name: Install cargo-modules
+      run: cargo install cargo-modules --version 0.23.1 --no-default-features --locked
+
+    - name: Verify API/UI Separation
+      run: |
+        # Fail if 'arxiv' logic layer attempts to import from 'ui' presentation layer.
+        # We use the regex discovered during terminal testing.
+        ! cargo modules dependencies --lib | grep -E "arxivlens::arxiv.*->.*arxivlens::ui"
+    
     - name: Clippy
       run: cargo clippy -- -D warnings
 
@@ -38,18 +47,3 @@ jobs:
 
     - name: Build
       run: cargo build --verbose
-
-    # --- ARCHITECTURE LINT ---#
-    # We pin the version and use --locked to ensure CI stability across 
-    # different Rust toolchains (e.g., local 1.85 vs GitHub 1.86+).
-    # This prevents 'dependency drift' where sub-dependencies of cargo-modules
-    # might suddenly require a newer rustc than what we are using.
-    - name: Install cargo-modules
-      run: cargo install cargo-modules --version 0.23.1 --no-default-features --locked
-    
-    - name: Verify API/UI Separation
-      run: |
-        # If 'arxiv' (data layer) tries to import from 'ui' (presentation), 
-        # grep finds the path, returns 0, and ! flips it to a failure.
-        # We add --lib so it knows to check the library target
-        ! cargo modules dependencies --lib | grep "arxiv -> ui"
