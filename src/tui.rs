@@ -72,4 +72,8 @@ impl<B: Backend> Tui<B> {
         self.terminal.show_cursor()?;
         Ok(())
     }
+
+    pub fn get_size(&self) -> Result<ratatui::layout::Rect, std::io::Error> {
+        self.terminal.size()
+    }
 }

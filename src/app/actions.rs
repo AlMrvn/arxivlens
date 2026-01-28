@@ -24,6 +24,45 @@ pub enum Action {
     ShowHelp,
     /// Yank (copy) the selected article ID
     YankId,
+    /// Close popup or quit if no popup is open
+    ClosePopup,
+}
+
+impl Action {
+    /// Check if this action is valid in the given context
+    pub fn is_valid_in(&self, context: &crate::app::Context) -> bool {
+        match self {
+            // These actions are always valid regardless of context
+            Action::Quit | Action::ShowHelp | Action::ToggleConfig => true,
+            // Navigation and yanking actions are only valid in ArticleList context
+            Action::MoveUp
+            | Action::MoveDown
+            | Action::PageUp
+            | Action::PageDown
+            | Action::GoToTop
+            | Action::GoToBottom
+            | Action::YankId => *context == crate::app::Context::ArticleList,
+            // ClosePopup is always valid - behavior depends on context
+            Action::ClosePopup => true,
+        }
+    }
+
+    /// Get a short description of the action
+    pub fn description(&self) -> &str {
+        match self {
+            Action::Quit => "Quit",
+            Action::MoveUp => "Up",
+            Action::MoveDown => "Down",
+            Action::PageUp => "Page Up",
+            Action::PageDown => "Page Down",
+            Action::GoToTop => "Go to Top",
+            Action::GoToBottom => "Go to Bottom",
+            Action::ToggleConfig => "Config",
+            Action::ShowHelp => "Help",
+            Action::YankId => "Yank",
+            Action::ClosePopup => "Close/Quit",
+        }
+    }
 }
 
 /// Represents a key binding configuration
@@ -35,15 +74,18 @@ pub struct KeyBind {
     pub modifiers: KeyModifiers,
     /// The action to perform when this key is pressed
     pub action: Action,
+    /// Whether this is a primary key binding (shown in footer)
+    pub is_primary: bool,
 }
 
 impl KeyBind {
     /// Create a new key binding
-    pub fn new(key: KeyCode, modifiers: KeyModifiers, action: Action) -> Self {
+    pub fn new(key: KeyCode, modifiers: KeyModifiers, action: Action, is_primary: bool) -> Self {
         Self {
             key,
             modifiers,
             action,
+            is_primary,
         }
     }
 }
@@ -54,76 +96,91 @@ pub const KEY_MAP: &[KeyBind] = &[
         key: KeyCode::Char('q'),
         modifiers: KeyModifiers::empty(),
         action: Action::Quit,
+        is_primary: true,
     },
     KeyBind {
         key: KeyCode::Esc,
         modifiers: KeyModifiers::empty(),
-        action: Action::Quit,
+        action: Action::ClosePopup,
+        is_primary: false,
     },
     KeyBind {
         key: KeyCode::Char('j'),
         modifiers: KeyModifiers::empty(),
         action: Action::MoveDown,
+        is_primary: true,
     },
     KeyBind {
         key: KeyCode::Down,
         modifiers: KeyModifiers::empty(),
         action: Action::MoveDown,
+        is_primary: false,
     },
     KeyBind {
         key: KeyCode::Char('k'),
         modifiers: KeyModifiers::empty(),
         action: Action::MoveUp,
+        is_primary: true,
     },
     KeyBind {
         key: KeyCode::Up,
         modifiers: KeyModifiers::empty(),
         action: Action::MoveUp,
+        is_primary: false,
     },
     KeyBind {
         key: KeyCode::Char('g'),
         modifiers: KeyModifiers::empty(),
         action: Action::GoToTop,
+        is_primary: false,
     },
     KeyBind {
         key: KeyCode::Char('G'),
         modifiers: KeyModifiers::SHIFT,
         action: Action::GoToBottom,
+        is_primary: false,
     },
     KeyBind {
         key: KeyCode::Char('c'),
         modifiers: KeyModifiers::empty(),
         action: Action::ToggleConfig,
+        is_primary: true,
     },
     KeyBind {
         key: KeyCode::Char('?'),
         modifiers: KeyModifiers::empty(),
         action: Action::ShowHelp,
+        is_primary: true,
     },
     KeyBind {
         key: KeyCode::Char('y'),
         modifiers: KeyModifiers::empty(),
         action: Action::YankId,
+        is_primary: true,
     },
     KeyBind {
         key: KeyCode::Char('d'),
         modifiers: KeyModifiers::CONTROL,
         action: Action::PageDown,
+        is_primary: false,
     },
     KeyBind {
         key: KeyCode::Char('u'),
         modifiers: KeyModifiers::CONTROL,
         action: Action::PageUp,
+        is_primary: false,
     },
     KeyBind {
         key: KeyCode::Char('c'),
         modifiers: KeyModifiers::CONTROL,
         action: Action::Quit,
+        is_primary: false,
     },
     KeyBind {
         key: KeyCode::Char('C'),
         modifiers: KeyModifiers::CONTROL,
         action: Action::Quit,
+        is_primary: false,
     },
 ];
 
@@ -139,12 +196,22 @@ pub fn create_key_map() -> HashMap<(KeyCode, KeyModifiers), Action> {
 mod tests {
     use super::*;
 
+    use crate::app::{tests::create_test_app, Context};
+    use crate::handler::handle_key_events;
+    use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+
     #[test]
     fn test_key_bind_creation() {
-        let kb = KeyBind::new(KeyCode::Char('q'), KeyModifiers::empty(), Action::Quit);
+        let kb = KeyBind::new(
+            KeyCode::Char('q'),
+            KeyModifiers::empty(),
+            Action::Quit,
+            true,
+        );
         assert_eq!(kb.key, KeyCode::Char('q'));
         assert_eq!(kb.modifiers, KeyModifiers::empty());
         assert_eq!(kb.action, Action::Quit);
+        assert_eq!(kb.is_primary, true);
     }
 
     #[test]
@@ -156,7 +223,7 @@ mod tests {
         );
         assert_eq!(
             key_map.get(&(KeyCode::Esc, KeyModifiers::empty())),
-            Some(&Action::Quit)
+            Some(&Action::ClosePopup)
         );
         assert_eq!(
             key_map.get(&(KeyCode::Char('j'), KeyModifiers::empty())),
@@ -211,8 +278,42 @@ mod tests {
     }
 
     #[test]
+    fn test_key_collision_prevention() {
+        let key_map = create_key_map();
+
+        // Test that 'c' maps to ToggleConfig
+        assert_eq!(
+            key_map.get(&(KeyCode::Char('c'), KeyModifiers::empty())),
+            Some(&Action::ToggleConfig)
+        );
+
+        // Test that 'Ctrl+c' maps to Quit
+        assert_eq!(
+            key_map.get(&(KeyCode::Char('c'), KeyModifiers::CONTROL)),
+            Some(&Action::Quit)
+        );
+
+        // Ensure they are different actions
+        assert_ne!(Action::ToggleConfig, Action::Quit);
+    }
+
+    #[test]
     fn test_action_equality() {
         assert_eq!(Action::Quit, Action::Quit);
         assert_ne!(Action::Quit, Action::MoveUp);
+    }
+    #[test]
+    fn test_esc_closes_popup_not_app() {
+        let mut app = create_test_app();
+
+        // Set the context to Help using the test helper
+        app.set_test_context(Context::Help);
+
+        let event = KeyEvent::new(KeyCode::Esc, KeyModifiers::empty());
+        handle_key_events(event, &mut app, 20).unwrap();
+
+        assert_eq!(app.current_context, Context::ArticleList);
+        assert!(!app.show_help); // Verify the flag was also unset
+        assert!(app.running);
     }
 }

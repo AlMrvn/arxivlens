@@ -80,7 +80,9 @@ fn main() -> AppResult<()> {
         tui.draw(&mut app)?;
         // Handle events.
         match tui.events.next()? {
-            Event::Key(key_event) => handle_key_events(key_event, &mut app)?,
+            Event::Key(key_event) => {
+                handle_key_events(key_event, &mut app, tui.get_size()?.height)?
+            }
             Event::Mouse(_) => {}
             Event::Resize(_, _) => {}
         }
