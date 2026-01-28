@@ -11,22 +11,18 @@ fn map_key_to_action(key_event: KeyEvent) -> Option<Action> {
 }
 
 /// Handles the key events and updates the state of [`App`].
-pub fn handle_key_events(key_event: KeyEvent, app: &mut App) -> AppResult<()> {
+pub fn handle_key_events(
+    key_event: KeyEvent,
+    app: &mut App,
+    terminal_height: u16,
+) -> AppResult<()> {
     if let Some(action) = map_key_to_action(key_event) {
-        match action {
-            Action::Quit => app.quit(),
-            Action::MoveUp => app.select_previous(),
-            Action::MoveDown => app.select_next(),
-            Action::PageUp => app.scroll_up(10),
-            Action::PageDown => app.scroll_down(10),
-            Action::GoToTop => app.select_first(),
-            Action::GoToBottom => app.select_last(),
-            Action::ToggleConfig => app.toggle_config(),
-            Action::ShowHelp => {
-                // TODO: Implement show help functionality
-            }
-            Action::YankId => app.yank_id(),
+        // Check if the action is valid in the current context
+        if !action.is_valid_in(&app.current_context) {
+            return Ok(());
         }
+
+        app.perform_action(action, terminal_height);
     }
 
     Ok(())
@@ -44,7 +40,7 @@ mod tests {
         let last_index = app.article_feed.len.saturating_sub(1);
 
         let event = KeyEvent::new(KeyCode::Char('G'), KeyModifiers::SHIFT);
-        handle_key_events(event, &mut app).unwrap();
+        handle_key_events(event, &mut app, 20).unwrap();
 
         assert_eq!(app.article_feed.state.selected(), Some(last_index));
     }
@@ -61,7 +57,7 @@ mod tests {
         // Create a KeyEvent for 'g' (lowercase g)
         let key_event = KeyEvent::new(KeyCode::Char('g'), KeyModifiers::empty());
 
-        handle_key_events(key_event, &mut app).unwrap();
+        handle_key_events(key_event, &mut app, 20).unwrap();
 
         assert_eq!(app.selected_index(), Some(0));
     }
@@ -75,7 +71,7 @@ mod tests {
         let key_event = KeyEvent::new(KeyCode::Char('q'), KeyModifiers::empty());
 
         // Handle the key event
-        handle_key_events(key_event, &mut app).unwrap();
+        handle_key_events(key_event, &mut app, 20).unwrap();
 
         // Assert that the app is no longer running
         assert!(!app.running);
@@ -93,6 +89,7 @@ mod tests {
         handle_key_events(
             KeyEvent::new(KeyCode::Char('j'), KeyModifiers::NONE),
             &mut app,
+            20,
         )
         .unwrap();
 
@@ -109,6 +106,7 @@ mod tests {
         handle_key_events(
             KeyEvent::new(KeyCode::Char('k'), KeyModifiers::NONE),
             &mut app,
+            20,
         )
         .unwrap();
 
@@ -125,9 +123,9 @@ mod tests {
         let mut app = create_test_app();
         let max_index = app.article_feed.len.saturating_sub(1);
 
-        // Simulate Ctrl+D
+        // Simulate Ctrl+D with terminal height
         let event = KeyEvent::new(KeyCode::Char('d'), KeyModifiers::CONTROL);
-        handle_key_events(event, &mut app).unwrap();
+        handle_key_events(event, &mut app, 20).unwrap(); // 20 height = 10 step
 
         // We expect it to be clamped to the very bottom
         assert_eq!(app.article_feed.state.selected(), Some(max_index));
@@ -141,7 +139,7 @@ mod tests {
 
         // 2. Simulate Ctrl+U (Page Up - usually a step of 10)
         let event = KeyEvent::new(KeyCode::Char('u'), KeyModifiers::CONTROL);
-        handle_key_events(event, &mut app).unwrap();
+        handle_key_events(event, &mut app, 20).unwrap(); // 20 height = 10 step
 
         // 3. Assert it clamped to 0
         assert_eq!(app.article_feed.state.selected(), Some(0));
@@ -159,9 +157,114 @@ mod tests {
             let mut app = create_test_app(); // Fresh app for each key
             assert!(app.running);
 
-            handle_key_events(event, &mut app).unwrap();
+            handle_key_events(event, &mut app, 20).unwrap();
 
             assert!(!app.running, "Key {:?} failed to quit the app", event.code);
         }
+    }
+
+    #[test]
+    fn test_navigation_disabled_in_config_context() {
+        let mut app = create_test_app();
+
+        // Set the context to Config using the test helper
+        app.set_test_context(crate::app::Context::Config);
+
+        // Capture the initial selected index
+        let initial_index = app.selected_index();
+
+        // Send a MoveDown key event
+        let key_event = KeyEvent::new(KeyCode::Char('j'), KeyModifiers::empty());
+        handle_key_events(key_event, &mut app, 20).unwrap();
+
+        // Assert that the selected index has NOT changed
+        assert_eq!(
+            app.selected_index(),
+            initial_index,
+            "Navigation should be disabled in Config context"
+        );
+    }
+
+    #[test]
+    fn test_help_context_lock() {
+        let mut app = create_test_app();
+
+        // Set the context to Help using the test helper
+        app.set_test_context(crate::app::Context::Help);
+
+        // Capture the initial selected index
+        let initial_index = app.selected_index();
+
+        // Send a MoveDown key event
+        let key_event = KeyEvent::new(KeyCode::Char('j'), KeyModifiers::empty());
+        handle_key_events(key_event, &mut app, 20).unwrap();
+
+        // Assert that the selected index has NOT changed
+        assert_eq!(
+            app.selected_index(),
+            initial_index,
+            "Navigation should be disabled in Help context"
+        );
+    }
+
+    #[test]
+    fn test_smart_esc_logic() {
+        let mut app = create_test_app();
+
+        // Test Esc in ArticleList context (should quit)
+        app.set_test_context(crate::app::Context::ArticleList);
+        assert!(app.running);
+
+        let esc_event = KeyEvent::new(KeyCode::Esc, KeyModifiers::empty());
+        handle_key_events(esc_event, &mut app, 20).unwrap();
+
+        assert!(!app.running, "Esc should quit when in ArticleList context");
+
+        // Test Esc in Config context (should close popup)
+        let mut app = create_test_app();
+        app.set_test_context(crate::app::Context::Config);
+        assert!(app.config_popup.is_visible());
+
+        let esc_event = KeyEvent::new(KeyCode::Esc, KeyModifiers::empty());
+        handle_key_events(esc_event, &mut app, 20).unwrap();
+
+        assert_eq!(app.current_context, crate::app::Context::ArticleList);
+        assert!(!app.config_popup.is_visible());
+        assert!(
+            app.running,
+            "App should still be running after closing popup"
+        );
+
+        // Test Esc in Help context (should close help)
+        let mut app = create_test_app();
+        app.set_test_context(crate::app::Context::Help);
+
+        let esc_event = KeyEvent::new(KeyCode::Esc, KeyModifiers::empty());
+        handle_key_events(esc_event, &mut app, 20).unwrap();
+
+        assert_eq!(app.current_context, crate::app::Context::ArticleList);
+        assert!(!app.show_help);
+        assert!(
+            app.running,
+            "App should still be running after closing help"
+        );
+    }
+
+    #[test]
+    fn test_dynamic_scrolling_math() {
+        let app = create_test_app();
+
+        // Test with very small terminal height
+        let small_step = app.calculate_half_page_step(1);
+        assert_eq!(small_step, 1, "Should have minimum step of 1 for height 1");
+
+        let small_step = app.calculate_half_page_step(2);
+        assert_eq!(small_step, 1, "Should have step of 1 for height 2");
+
+        let normal_step = app.calculate_half_page_step(20);
+        assert_eq!(normal_step, 10, "Should have step of 10 for height 20");
+
+        let large_step = app.calculate_half_page_step(100);
+        assert_eq!(large_step, 50, "Should have step of 50 for height 100");
     }
 }
