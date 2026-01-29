@@ -5,6 +5,13 @@ use ratatui::text::{Line, Span};
 
 use crate::ui::Theme;
 
+/// Convert Option<Vec<String>> to Option<Vec<&str>>
+pub fn option_vec_to_option_slice(option_vec: &Option<Vec<String>>) -> Option<Vec<&str>> {
+    option_vec
+        .as_deref()
+        .map(|v| v.iter().map(String::as_str).collect::<Vec<&str>>())
+}
+
 pub fn check_author_match(authors: &[String], patterns: &[&str]) -> bool {
     if patterns.is_empty() {
         return false;

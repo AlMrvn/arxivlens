@@ -18,3 +18,6 @@ pub mod config;
 
 /// Arxiv tools
 pub mod arxiv;
+
+/// Search engine
+pub mod search;

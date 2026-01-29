@@ -1,6 +1,6 @@
 use crate::app::actions::{Action, KEY_MAP};
 use crate::app::{App, AppResult};
-use ratatui::crossterm::event::KeyEvent;
+use ratatui::crossterm::event::{KeyCode, KeyEvent};
 
 /// Maps a key event to an action based on the KEY_MAP
 fn map_key_to_action(key_event: KeyEvent) -> Option<Action> {
@@ -16,6 +16,55 @@ pub fn handle_key_events(
     app: &mut App,
     terminal_height: u16,
 ) -> AppResult<()> {
+    // Handle entering search mode from ArticleList context
+    if app.current_context == crate::app::Context::ArticleList
+        && key_event.code == KeyCode::Char('/')
+    {
+        app.set_context(crate::app::Context::Search);
+        return Ok(());
+    }
+
+    // Handle search input when in search context
+    if app.current_context == crate::app::Context::Search {
+        match key_event.code {
+            KeyCode::Char(c) => {
+                app.search_state.push_char(c);
+                // Sync selection state immediately after search update
+                let visible_count = app.get_visible_count();
+                if visible_count > 0 {
+                    app.article_list_state.select(Some(0));
+                } else {
+                    app.article_list_state.select(None);
+                }
+                return Ok(());
+            }
+            KeyCode::Backspace => {
+                app.search_state.pop_char();
+                // Sync selection state immediately after search update
+                let visible_count = app.get_visible_count();
+                if visible_count > 0 {
+                    app.article_list_state.select(Some(0));
+                } else {
+                    app.article_list_state.select(None);
+                }
+                return Ok(());
+            }
+            KeyCode::Esc => {
+                // Exit search mode and return to article list
+                app.set_context(crate::app::Context::ArticleList);
+                return Ok(());
+            }
+            KeyCode::Enter => {
+                // Exit search mode and return to article list
+                app.set_context(crate::app::Context::ArticleList);
+                return Ok(());
+            }
+            _ => {
+                // Fall through to normal action handling for other keys like Esc
+            }
+        }
+    }
+
     if let Some(action) = map_key_to_action(key_event) {
         // Check if the action is valid in the current context
         if !action.is_valid_in(&app.current_context) {
@@ -37,12 +86,12 @@ mod tests {
     #[test]
     fn test_handle_g_to_bottom() {
         let mut app = create_test_app();
-        let last_index = app.article_feed.len.saturating_sub(1);
+        let last_index = app.get_visible_count().saturating_sub(1);
 
         let event = KeyEvent::new(KeyCode::Char('G'), KeyModifiers::SHIFT);
         handle_key_events(event, &mut app, 20).unwrap();
 
-        assert_eq!(app.article_feed.state.selected(), Some(last_index));
+        assert_eq!(app.article_list_state.selected(), Some(last_index));
     }
 
     #[test]
@@ -51,7 +100,7 @@ mod tests {
 
         // First move to the bottom
         app.select_last();
-        let last_index = app.article_feed.len.saturating_sub(1);
+        let last_index = app.get_visible_count().saturating_sub(1);
         assert_eq!(app.selected_index(), Some(last_index));
 
         // Create a KeyEvent for 'g' (lowercase g)
@@ -80,11 +129,11 @@ mod tests {
     #[test]
     fn test_handle_j_and_k() {
         let mut app = create_test_app();
-        let max_index = app.article_feed.len.saturating_sub(1);
+        let max_index = app.get_visible_count().saturating_sub(1);
 
         // --- Test 'j' (Down) ---
-        app.article_feed.state.select(Some(0)); // Start at top
-        let initial = app.article_feed.state.selected().unwrap_or(0);
+        app.article_list_state.select(Some(0)); // Start at top
+        let initial = app.article_list_state.selected().unwrap_or(0);
 
         handle_key_events(
             KeyEvent::new(KeyCode::Char('j'), KeyModifiers::NONE),
@@ -95,13 +144,13 @@ mod tests {
 
         let expected_down = (initial + 1).min(max_index);
         assert_eq!(
-            app.article_feed.state.selected(),
+            app.article_list_state.selected(),
             Some(expected_down),
             "Failed on 'j' move"
         );
 
         // --- Test 'k' (Up) ---
-        let current = app.article_feed.state.selected().unwrap_or(0);
+        let current = app.article_list_state.selected().unwrap_or(0);
 
         handle_key_events(
             KeyEvent::new(KeyCode::Char('k'), KeyModifiers::NONE),
@@ -112,7 +161,7 @@ mod tests {
 
         let expected_up = current.saturating_sub(1);
         assert_eq!(
-            app.article_feed.state.selected(),
+            app.article_list_state.selected(),
             Some(expected_up),
             "Failed on 'k' move"
         );
@@ -121,28 +170,28 @@ mod tests {
     #[test]
     fn test_handle_ctrl_d_page_down() {
         let mut app = create_test_app();
-        let max_index = app.article_feed.len.saturating_sub(1);
+        let max_index = app.get_visible_count().saturating_sub(1);
 
         // Simulate Ctrl+D with terminal height
         let event = KeyEvent::new(KeyCode::Char('d'), KeyModifiers::CONTROL);
         handle_key_events(event, &mut app, 20).unwrap(); // 20 height = 10 step
 
         // We expect it to be clamped to the very bottom
-        assert_eq!(app.article_feed.state.selected(), Some(max_index));
+        assert_eq!(app.article_list_state.selected(), Some(max_index));
     }
 
     #[test]
     fn test_handle_ctrl_u_page_up() {
         let mut app = create_test_app();
         // 1. Move to the bottom first (index 4)
-        app.article_feed.state.select(Some(4));
+        app.article_list_state.select(Some(4));
 
         // 2. Simulate Ctrl+U (Page Up - usually a step of 10)
         let event = KeyEvent::new(KeyCode::Char('u'), KeyModifiers::CONTROL);
         handle_key_events(event, &mut app, 20).unwrap(); // 20 height = 10 step
 
         // 3. Assert it clamped to 0
-        assert_eq!(app.article_feed.state.selected(), Some(0));
+        assert_eq!(app.article_list_state.selected(), Some(0));
     }
 
     #[test]

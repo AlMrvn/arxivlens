@@ -3,7 +3,7 @@ use crate::arxiv::ArxivEntry;
 use crate::config::HighlightConfig;
 use crate::ui::Theme;
 
-use super::option_vec_to_option_slice;
+use crate::ui::option_vec_to_option_slice;
 use itertools::izip;
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
@@ -28,6 +28,16 @@ impl<'a> ArticleDetails<'a> {
             authors: highlight_patterns(entry.get_all_authors(), author_patterns.as_deref(), theme),
             summary: highlight_patterns(&entry.summary, keyword_patterns.as_deref(), theme),
             updated: Line::raw(&entry.updated).style(theme.main),
+        }
+    }
+
+    /// Create an ArticleDetails for displaying "No results found" message
+    pub fn no_results(theme: &Theme) -> ArticleDetails<'static> {
+        ArticleDetails {
+            title: Line::raw("No results found").style(theme.main),
+            authors: Line::raw("").style(theme.main),
+            summary: Line::raw("No articles match your current search criteria.\n\nYou can:\n• Try different keywords\n• Check for typos\n• Use broader search terms\n• Clear the search to see all articles").style(theme.main),
+            updated: Line::raw("").style(theme.main),
         }
     }
 
