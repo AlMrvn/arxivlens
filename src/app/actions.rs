@@ -26,6 +26,8 @@ pub enum Action {
     YankId,
     /// Close popup or quit if no popup is open
     ClosePopup,
+    /// Enter search mode
+    Search,
 }
 
 impl Action {
@@ -44,6 +46,8 @@ impl Action {
             | Action::YankId => *context == crate::app::Context::ArticleList,
             // ClosePopup is always valid - behavior depends on context
             Action::ClosePopup => true,
+            // Search is always valid
+            Action::Search => true,
         }
     }
 
@@ -61,6 +65,7 @@ impl Action {
             Action::ShowHelp => "Help",
             Action::YankId => "Yank",
             Action::ClosePopup => "Close/Quit",
+            Action::Search => "Search",
         }
     }
 }
@@ -182,6 +187,12 @@ pub const KEY_MAP: &[KeyBind] = &[
         action: Action::Quit,
         is_primary: false,
     },
+    KeyBind {
+        key: KeyCode::Char('/'),
+        modifiers: KeyModifiers::empty(),
+        action: Action::Search,
+        is_primary: true,
+    },
 ];
 
 /// Helper function to create a HashMap from the key mappings for quick lookup
@@ -274,7 +285,7 @@ mod tests {
     #[test]
     fn test_key_map_size() {
         let key_map = create_key_map();
-        assert_eq!(key_map.len(), 15);
+        assert_eq!(key_map.len(), 16);
     }
 
     #[test]

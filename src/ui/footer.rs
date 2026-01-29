@@ -14,6 +14,28 @@ pub fn render_footer(frame: &mut Frame, area: Rect, app: &App) {
         return; // Don't render anything if too narrow
     }
 
+    // Special handling for Search context
+    if app.current_context == crate::app::Context::Search {
+        let search_shortcuts = vec![
+            ("[Esc]".to_string(), "Cancel".to_string()),
+            ("[Enter]".to_string(), "Apply".to_string()),
+        ];
+        let footer_line = build_footer_line(&search_shortcuts, area.width);
+
+        // Create a reversed style for the footer
+        let footer_style = Style::default()
+            .bg(app.theme.main.fg.unwrap_or(ratatui::style::Color::White))
+            .fg(app.theme.main.bg.unwrap_or(ratatui::style::Color::Black));
+
+        frame.render_widget(
+            Paragraph::new(footer_line)
+                .style(footer_style)
+                .block(Block::new()),
+            area,
+        );
+        return;
+    }
+
     // Filter KEY_MAP for primary actions valid in current context
     let primary_keybinds: Vec<_> = KEY_MAP
         .iter()

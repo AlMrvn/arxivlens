@@ -1,0 +1,242 @@
+[
+  {
+    "title": "Quantum Computing: A Comprehensive Introduction",
+    "authors": ["Alice Johnson"],
+    "summary": "This paper provides a comprehensive introduction to quantum computing principles and applications.",
+    "id": "quant-ph/0001",
+    "updated": "2024-01-01",
+    "published": "2024-01-01"
+  },
+  {
+    "title": "Quantum Mechanics and Information Theory",
+    "authors": ["Bob Smith"],
+    "summary": "Exploring the intersection of quantum mechanics and information theory in modern physics.",
+    "id": "quant-ph/0002",
+    "updated": "2024-01-01",
+    "published": "2024-01-01"
+  },
+  {
+    "title": "Introduction to Quantum Physics",
+    "authors": ["Charlie Brown"],
+    "summary": "A beginner-friendly guide to understanding quantum physics fundamentals.",
+    "id": "quant-ph/0003",
+    "updated": "2024-01-01",
+    "published": "2024-01-01"
+  },
+  {
+    "title": "Advanced Quantum Algorithms",
+    "authors": ["Diana Prince"],
+    "summary": "Deep dive into advanced quantum algorithms for computational problems.",
+    "id": "quant-ph/0004",
+    "updated": "2024-01-01",
+    "published": "2024-01-01"
+  },
+  {
+    "title": "The Future of Quantum Technology",
+    "authors": ["Eve Wilson"],
+    "summary": "Examining the potential future developments in quantum technology and their implications.",
+    "id": "quant-ph/0005",
+    "updated": "2024-01-01",
+    "published": "2024-01-01"
+  },
+  {
+    "title": "Principles of Quantum Entanglement",
+    "authors": ["Frank Miller"],
+    "summary": "Understanding quantum entanglement and its role in quantum information processing.",
+    "id": "quant-ph/0006",
+    "updated": "2024-01-01",
+    "published": "2024-01-01"
+  },
+  {
+    "title": "Modern Quantum Field Theory",
+    "authors": ["Grace Lee"],
+    "summary": "Contemporary approaches to quantum field theory and particle physics.",
+    "id": "quant-ph/0007",
+    "updated": "2024-01-01",
+    "published": "2024-01-01"
+  },
+  {
+    "title": "Applications of Quantum Cryptography",
+    "authors": ["Henry Davis"],
+    "summary": "Practical applications of quantum cryptography in secure communications.",
+    "id": "quant-ph/0008",
+    "updated": "2024-01-01",
+    "published": "2024-01-01"
+  },
+  {
+    "title": "Machine Learning for Beginners",
+    "authors": ["Ivan Petrov"],
+    "summary": "An introductory guide to machine learning concepts and techniques.",
+    "id": "cs.LG/0001",
+    "updated": "2024-01-02",
+    "published": "2024-01-02"
+  },
+  {
+    "title": "Deep Learning Neural Networks",
+    "authors": ["Julia Roberts"],
+    "summary": "Comprehensive study of deep learning architectures and neural networks.",
+    "id": "cs.LG/0002",
+    "updated": "2024-01-02",
+    "published": "2024-01-02"
+  },
+  {
+    "title": "Machine Learning in Healthcare",
+    "authors": ["Kevin Zhang"],
+    "summary": "Applications of machine learning techniques in medical diagnosis and treatment.",
+    "id": "cs.LG/0003",
+    "updated": "2024-01-02",
+    "published": "2024-01-02"
+  },
+  {
+    "title": "Reinforcement Learning Algorithms",
+    "authors": ["Linda Garcia"],
+    "summary": "Survey of modern reinforcement learning algorithms and their applications.",
+    "id": "cs.LG/0004",
+    "updated": "2024-01-02",
+    "published": "2024-01-02"
+  },
+  {
+    "title": "Natural Language Processing with Machine Learning",
+    "authors": ["Mike Johnson"],
+    "summary": "Using machine learning for natural language understanding and generation.",
+    "id": "cs.LG/0005",
+    "updated": "2024-01-02",
+    "published": "2024-01-02"
+  },
+  {
+    "title": "Computer Vision and Machine Learning",
+    "authors": ["Nancy Williams"],
+    "summary": "Integration of computer vision techniques with machine learning models.",
+    "id": "cs.LG/0006",
+    "updated": "2024-01-02",
+    "published": "2024-01-02"
+  },
+  {
+    "title": "Supervised Machine Learning Methods",
+    "authors": ["Oscar Martinez"],
+    "summary": "Detailed analysis of supervised learning approaches and methodologies.",
+    "id": "cs.LG/0007",
+    "updated": "2024-01-02",
+    "published": "2024-01-02"
+  },
+  {
+    "title": "Unsupervised Machine Learning Techniques",
+    "authors": ["Paula Anderson"],
+    "summary": "Exploration of clustering, dimensionality reduction, and other unsupervised methods.",
+    "id": "cs.LG/0008",
+    "updated": "2024-01-02",
+    "published": "2024-01-02"
+  },
+  {
+    "title": "The Rust Programming Language",
+    "authors": ["Steve Klabnik"],
+    "summary": "Complete guide to the Rust programming language and its ecosystem.",
+    "id": "cs.PL/0001",
+    "updated": "2024-01-03",
+    "published": "2024-01-03"
+  },
+  {
+    "title": "Rust Programming: Advanced Concepts",
+    "authors": ["Carol Nichols"],
+    "summary": "Advanced programming techniques and patterns in Rust.",
+    "id": "cs.PL/0002",
+    "updated": "2024-01-03",
+    "published": "2024-01-03"
+  },
+  {
+    "title": "Learning Rust Programming",
+    "authors": ["Jim Blandy"],
+    "summary": "Step-by-step approach to learning Rust programming fundamentals.",
+    "id": "cs.PL/0003",
+    "updated": "2024-01-03",
+    "published": "2024-01-03"
+  },
+  {
+    "title": "Rust Programming for Systems",
+    "authors": ["Jason Orendorff"],
+    "summary": "Using Rust for systems programming and low-level development.",
+    "id": "cs.PL/0004",
+    "updated": "2024-01-03",
+    "published": "2024-01-03"
+  },
+  {
+    "title": "The Complete Rust Guide",
+    "authors": ["Ashley Williams"],
+    "summary": "Comprehensive reference for Rust programming language features.",
+    "id": "cs.PL/0005",
+    "updated": "2024-01-03",
+    "published": "2024-01-03"
+  },
+  {
+    "title": "Rust: The Programming Language",
+    "authors": ["Graydon Hoare"],
+    "summary": "In-depth exploration of Rust language design and implementation.",
+    "id": "cs.PL/0006",
+    "updated": "2024-01-03",
+    "published": "2024-01-03"
+  },
+  {
+    "title": "量子计算的基础理论",
+    "authors": ["李明"],
+    "summary": "量子计算基础理论的综合介绍和应用前景分析。",
+    "id": "cs.AI/0001",
+    "updated": "2024-01-04",
+    "published": "2024-01-04"
+  },
+  {
+    "title": "Théorie quantique et applications",
+    "authors": ["Marie Dubois"],
+    "summary": "Une introduction complète à la théorie quantique et ses applications pratiques.",
+    "id": "cs.AI/0002",
+    "updated": "2024-01-04",
+    "published": "2024-01-04"
+  },
+  {
+    "title": "Квантовая механика и информатика",
+    "authors": ["Иван Иванов"],
+    "summary": "Исследование пересечения квантовой механики и информационных технологий.",
+    "id": "cs.AI/0003",
+    "updated": "2024-01-04",
+    "published": "2024-01-04"
+  },
+  {
+    "title": "機械学習とデータサイエンス",
+    "authors": ["田中太郎"],
+    "summary": "機械学習の基礎理論とデータサイエンスへの応用について。",
+    "id": "cs.AI/0004",
+    "updated": "2024-01-04",
+    "published": "2024-01-04"
+  },
+  {
+    "title": "Aprendizaje automático en español",
+    "authors": ["Carlos García"],
+    "summary": "Introducción al aprendizaje automático y sus aplicaciones en diversos campos.",
+    "id": "cs.AI/0005",
+    "updated": "2024-01-04",
+    "published": "2024-01-04"
+  },
+  {
+    "title": "Μηχανική μάθηση και τεχνητή νοημοσύνη",
+    "authors": ["Γιάννης Παπαδόπουλος"],
+    "summary": "Εισαγωγή στη μηχανική μάθηση και την τεχνητή νοημοσύνη.",
+    "id": "cs.AI/0006",
+    "updated": "2024-01-04",
+    "published": "2024-01-04"
+  },
+  {
+    "title": "الذكاء الاصطناعي والتعلم الآلي",
+    "authors": ["أحمد محمد"],
+    "summary": "مقدمة شاملة للذكاء الاصطناعي وتقنيات التعلم الآلي الحديثة.",
+    "id": "cs.AI/0007",
+    "updated": "2024-01-04",
+    "published": "2024-01-04"
+  },
+  {
+    "title": "कृत्रिम बुद्धिमत्ता और मशीन लर्निंग",
+    "authors": ["राज शर्मा"],
+    "summary": "कृत्रिम बुद्धिमत्ता और मशीन लर्निंग की मूलभूत अवधारणाओं का परिचय।",
+    "id": "cs.AI/0008",
+    "updated": "2024-01-04",
+    "published": "2024-01-04"
+  }
+]
