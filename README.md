@@ -129,6 +129,31 @@ src/
   - **query.rs**: Handles API queries and responses
   - **parsing.rs**: Parses XML responses into Rust structs
 
+## UI Testing & Golden Files
+
+This project uses Golden File testing (snapshot testing) for UI components to prevent layout regressions. Golden files capture the expected terminal output for each component and are compared against actual output during tests.
+
+### Running Tests
+
+Run all tests (including golden file comparisons):
+```bash
+cargo test
+```
+
+Run only the UI integration tests:
+```bash
+cargo test --test ui_golden_tests
+```
+
+### Updating Golden Files
+
+When you intentionally change the UI design and need to update the expected output:
+```bash
+UPDATE_GOLDEN=1 cargo test --test ui_golden_tests
+```
+
+Golden files are stored in `tests/golden/` and should be committed to version control as they represent the expected UI behavior.
+
 ## Contributing
 Contributions are welcome! Please feel free to submit a Pull Request.
 

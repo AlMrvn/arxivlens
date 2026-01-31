@@ -164,6 +164,9 @@ name = "bitflags"
 version = "2.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5c8214115b7bf84099f1309324e63141d4c5d7cc26862f97a0a857dbefe165bd"
+dependencies = [
+ "serde",
+]
 
 [[package]]
 name = "block2"
@@ -293,6 +296,7 @@ dependencies = [
  "cfg-if",
  "itoa",
  "ryu",
+ "serde",
  "static_assertions",
 ]
 
@@ -1384,6 +1388,7 @@ dependencies = [
  "itertools",
  "lru",
  "paste",
+ "serde",
  "stability",
  "strum",
  "strum_macros",
