@@ -1,10 +1,10 @@
 use crate::arxiv::{ArxivEntry, ArxivQueryResult};
 use crate::config::{Config, HighlightConfig};
+use crate::search::engine::SearchEngine;
 use crate::ui::{
     option_vec_to_option_slice, render_footer, render_help_popup, search::render_search_bar,
     ArticleDetails, ArticleFeed, ConfigPopup, Theme,
 };
-use crate::search::engine::SearchEngine;
 use arboard::Clipboard;
 use search::SearchState;
 use std::error::Error;
