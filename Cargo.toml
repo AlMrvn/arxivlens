@@ -16,7 +16,7 @@ exclude = ["/.github" ]
 [dependencies]
 arboard = "3.4.0"
 minidom = "0.15.2"
-ratatui = "0.27.0"
+ratatui = { version = "0.27.0", features = ["serde"] }
 reqwest = { version = "0.12.5", features = ["blocking"] }
 clap = {version = "4.0", features = ["derive"]}
 aho-corasick = "1.1.3"
