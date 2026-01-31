@@ -4,6 +4,7 @@ use crate::ui::{
     option_vec_to_option_slice, render_footer, render_help_popup, search::render_search_bar,
     ArticleDetails, ArticleFeed, ConfigPopup, Theme,
 };
+use crate::search::engine::SearchEngine;
 use arboard::Clipboard;
 use search::SearchState;
 use std::error::Error;
@@ -53,6 +54,8 @@ pub struct App<'a> {
     pub search_state: SearchState,
     /// Current selection state for the article list
     pub article_list_state: ratatui::widgets::ListState,
+    /// Search Engine for fuzzy-matching
+    pub search_engine: SearchEngine,
 }
 
 impl<'a> App<'a> {
@@ -78,6 +81,7 @@ impl<'a> App<'a> {
             help_state: ratatui::widgets::ListState::default(),
             search_state,
             article_list_state: ratatui::widgets::ListState::default(),
+            search_engine: crate::search::engine::SearchEngine::new(),
         }
     }
 }
@@ -272,12 +276,29 @@ impl App<'_> {
     }
 
     /// Get the current article count (filtered or total)
-    pub fn get_visible_count(&self) -> usize {
+    pub fn get_visible_count(&mut self) -> usize {
         if self.search_state.is_active() {
+            self.update_search_filter();
             self.search_state.filtered_count()
         } else {
             self.query_result.articles.len()
         }
+    }
+    /// Internal helper to sync the search engine with the UI state
+    pub fn update_search_filter(&mut self) {
+        let haystacks: Vec<String> = self
+            .query_result
+            .articles
+            .iter()
+            .map(|a| a.title.clone())
+            .collect();
+
+        let indices = self
+            .search_engine
+            .filter(&self.search_state.query, &haystacks);
+
+        // Update the search_state with the new indices
+        self.search_state.filtered_indices = indices;
     }
 
     /// Get the actual article index from the visible index
@@ -310,38 +331,31 @@ impl App<'_> {
         self.search_state.set_articles(&self.query_result.articles);
     }
 
-    /// Reset selection to first match when search changes
-    pub fn reset_selection_to_first_match(&mut self) {
+    /// Sync selection to first match after search changes
+    fn sync_selection_to_filter(&mut self) {
         let visible_count = self.get_visible_count();
         if visible_count > 0 {
             self.article_list_state.select(Some(0));
         } else {
             self.article_list_state.select(None);
         }
+    }
+
+    /// Reset selection to first match when search changes
+    pub fn reset_selection_to_first_match(&mut self) {
+        self.sync_selection_to_filter();
     }
 
     /// Handle search character input and sync selection
     pub fn handle_search_char(&mut self, c: char) {
         self.search_state.push_char(c);
-        // Immediately sync selection to first match
-        let visible_count = self.get_visible_count();
-        if visible_count > 0 {
-            self.article_list_state.select(Some(0));
-        } else {
-            self.article_list_state.select(None);
-        }
+        self.sync_selection_to_filter();
     }
 
     /// Handle search backspace and sync selection
     pub fn handle_search_backspace(&mut self) {
         self.search_state.pop_char();
-        // Immediately sync selection to first match
-        let visible_count = self.get_visible_count();
-        if visible_count > 0 {
-            self.article_list_state.select(Some(0));
-        } else {
-            self.article_list_state.select(None);
-        }
+        self.sync_selection_to_filter();
     }
 
     pub fn yank_id(&mut self) {
@@ -717,55 +731,30 @@ pub mod tests {
         app.search_state.push_char('z');
         app.search_state.push_char('z'); // "zzz" should match nothing
 
-        // THIS is where the integration test is failing.
         // If this unit test also fails, we've caught the bug locally.
-        assert!(
-            app.get_visible_count() < total,
-            "Visible count should decrease when a non-matching query is pushed"
-        );
+        let visible = app.get_visible_count();
+
+        assert!(visible < total, "Visible count should decrease");
+        assert_eq!(visible, 0, "Query 'zzz' should return 0 results");
     }
+
     #[test]
-    fn test_article_feed_is_stale_after_search() {
-        let mut app = create_test_app(); // Assume this has 5 articles
-        let theme = crate::ui::Theme::default();
+    fn test_app_search_partial_match() {
+        let mut app = create_test_app();
 
-        // 1. Create a "Feed" snapshot (Length = 5)
-        let feed_before = crate::ui::ArticleFeed::new_with_search(
-            app.query_result,
-            None,
-            &theme,
-            Some(&app.search_state),
-        );
-        assert_eq!(feed_before.len, 5);
+        // 1. Search for "Paper 1"
+        app.search_state.push_char('P');
+        app.search_state.push_char('a');
+        app.search_state.push_char('p');
+        app.search_state.push_char('e');
+        app.search_state.push_char('r');
+        app.search_state.push_char(' ');
+        app.search_state.push_char('1');
 
-        // 2. Change the App State (Push a char that matches nothing)
-        app.search_state.push_char('z');
-        app.search_state.push_char('z');
-        app.search_state.push_char('z');
-
-        // 3. The App's direct count is now correctly filtered
-        assert_eq!(app.get_visible_count(), 0, "App state updated correctly");
-
-        // 4. HYPOTHESIS: The old feed variable is still 5 (STALE)
-        // If your integration test asserts against a variable created at step 1,
-        // it will fail here, exactly like line 97.
-        assert_eq!(
-            feed_before.len, 5,
-            "The old feed object did not update! It is stale."
-        );
-
-        // 5. THE FIX: You must create a NEW feed after the search
-        let feed_after = crate::ui::ArticleFeed::new_with_search(
-            app.query_result,
-            None,
-            &theme,
-            Some(&app.search_state),
-        );
-        assert_eq!(
-            feed_after.len, 0,
-            "The fresh feed object reflects the search"
-        );
+        // 2. Verify we only see the one matching paper
+        assert_eq!(app.get_visible_count(), 1);
     }
+
     #[test]
     fn diagnostic_replicate_integration_failure() {
         let mut app = create_test_app();
