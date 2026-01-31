@@ -1,4 +1,6 @@
+use nucleo::pattern::{CaseMatching, Normalization, Pattern};
 use nucleo::{Config, Nucleo};
+use std::fmt;
 use std::sync::Arc;
 
 /// Configuration for the search engine scoring and filtering behavior.
@@ -96,13 +98,9 @@ impl SearchEngine {
         }
 
         // 2. Configure Pattern
-        self.matcher.pattern.reparse(
-            0,
-            query,
-            nucleo::pattern::CaseMatching::Ignore,
-            nucleo::pattern::Normalization::Smart,
-            true,
-        );
+        self.matcher
+            .pattern
+            .reparse(0, query, CaseMatching::Ignore, Normalization::Smart, true);
 
         // 3. Process matches
         self.matcher.tick(50);
@@ -190,11 +188,44 @@ impl SearchEngine {
 
         scored_matches.into_iter().map(|(idx, _)| idx).collect()
     }
+
+    /// Generates highlighting indices for a specific string based on the current query.
+    /// This uses the internal matcher to ensure UI highlighting matches search logic.
+    pub fn get_highlight_indices(&mut self, query: &str, text: &str) -> Vec<u32> {
+        if query.is_empty() {
+            return Vec::new();
+        }
+
+        let mut indices = Vec::new();
+        let pattern = Pattern::parse(query, CaseMatching::Ignore, Normalization::Smart);
+        let haystack = nucleo::Utf32String::from(text);
+
+        // Use a lightweight matcher for individual string highlighting
+        let mut matcher = nucleo::Matcher::new(nucleo::Config::DEFAULT);
+
+        if pattern
+            .indices(haystack.slice(..), &mut matcher, &mut indices)
+            .is_some()
+        {
+            indices
+        } else {
+            Vec::new()
+        }
+    }
 }
 
 impl Default for SearchEngine {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+// Manual implementation since Nucleo doesn't support Debug
+impl fmt::Debug for SearchEngine {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("SearchEngine")
+            .field("config", &self.config)
+            .finish_non_exhaustive()
     }
 }
 
