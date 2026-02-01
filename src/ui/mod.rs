@@ -1,24 +1,20 @@
 pub mod component;
 pub mod components;
-pub mod footer;
 pub mod highlight;
-pub mod search;
 pub mod style;
 pub mod testing;
 pub mod theme;
 pub mod utils;
 
 // Legacy exports (to maintain compatibility during transition)
-pub use footer::render_footer;
-pub use search::render_search_bar;
 pub use style::Theme as LegacyTheme;
 pub use utils::option_vec_to_option_slice;
 
 // New component-based architecture exports
 pub use component::{Component, ComponentLayout, LayoutComponent, TestableComponent};
 pub use components::{
-    ArticleListComponent, ConfigPopupComponent, HelpPopupComponent, PreviewComponent,
-    SearchBarComponent,
+    ArticleListComponent, ConfigPopupComponent, FooterComponent, HelpPopupComponent,
+    PreviewComponent, SearchBarComponent,
 };
 pub use testing::GoldenTester;
 pub use theme::Theme;
@@ -99,7 +95,12 @@ pub fn render(app: &mut App, frame: &mut Frame) {
     preview_component.render(frame, main_layout[1], &mut preview_state, &app.theme);
 
     // --- Render Footer ---
-    render_footer(frame, layout[2], app);
+    let footer_component = FooterComponent::new();
+    let mut footer_state = components::footer::FooterState {
+        current_context: app.current_context,
+        visible: true,
+    };
+    footer_component.render(frame, layout[2], &mut footer_state, &app.theme);
 
     // --- Render Overlays (Popups) ---
     render_overlays(app, frame);
