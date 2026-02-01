@@ -12,8 +12,7 @@ pub struct FooterComponent {
     focused: bool,
 }
 
-pub struct FooterState<'a> {
-    pub app: &'a App<'a>,
+pub struct FooterState {
     pub visible: bool,
 }
 
@@ -23,10 +22,10 @@ impl FooterComponent {
     }
 }
 
-impl Component for FooterComponent {
-    type State<'a> = FooterState<'a>;
+impl Component<'_> for FooterComponent {
+    type State = FooterState;
 
-    fn render(&mut self, frame: &mut Frame, area: Rect, state: &mut Self::State<'_>, theme: &Theme) {
+    fn render(&self, frame: &mut Frame, area: Rect, state: &mut Self::State<'_>, theme: &Theme) {
         if !state.visible {
             return;
         }
@@ -59,7 +58,9 @@ impl Component for FooterComponent {
         // Filter KEY_MAP for primary actions valid in current context
         let primary_keybinds: Vec<_> = KEY_MAP
             .iter()
-            .filter(|keybind| keybind.is_primary && keybind.action.is_valid_in(&state.app.current_context))
+            .filter(|keybind| {
+                keybind.is_primary && keybind.action.is_valid_in(&state.app.current_context)
+            })
             .collect();
 
         // Group by action and combine keys
