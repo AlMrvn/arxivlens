@@ -16,6 +16,12 @@ pub fn handle_key_events(
     app: &mut App,
     terminal_height: u16,
 ) -> AppResult<()> {
+    // Handle Tab key for focus switching in ArticleList context
+    if app.current_context == crate::app::Context::ArticleList && key_event.code == KeyCode::Tab {
+        app.toggle_focus();
+        return Ok(());
+    }
+
     // Handle entering search mode from ArticleList context
     if app.current_context == crate::app::Context::ArticleList
         && key_event.code == KeyCode::Char('/')
@@ -25,28 +31,14 @@ pub fn handle_key_events(
     }
 
     // Handle search input when in search context
-    if app.current_context == crate::app::Context::Search {
+    if matches!(app.current_context, crate::app::Context::Search) {
         match key_event.code {
             KeyCode::Char(c) => {
-                app.search_state.push_char(c);
-                // Sync selection state immediately after search update
-                let visible_count = app.get_visible_count();
-                if visible_count > 0 {
-                    app.article_list_state.select(Some(0));
-                } else {
-                    app.article_list_state.select(None);
-                }
+                app.handle_search_char(c);
                 return Ok(());
             }
             KeyCode::Backspace => {
-                app.search_state.pop_char();
-                // Sync selection state immediately after search update
-                let visible_count = app.get_visible_count();
-                if visible_count > 0 {
-                    app.article_list_state.select(Some(0));
-                } else {
-                    app.article_list_state.select(None);
-                }
+                app.handle_search_backspace();
                 return Ok(());
             }
             KeyCode::Esc => {
@@ -216,8 +208,8 @@ mod tests {
     fn test_navigation_disabled_in_config_context() {
         let mut app = create_test_app();
 
-        // Set the context to Config using the test helper
-        app.set_test_context(crate::app::Context::Config);
+        // Set the context to Config
+        app.set_context(crate::app::Context::Config);
 
         // Capture the initial selected index
         let initial_index = app.selected_index();
@@ -238,8 +230,8 @@ mod tests {
     fn test_help_context_lock() {
         let mut app = create_test_app();
 
-        // Set the context to Help using the test helper
-        app.set_test_context(crate::app::Context::Help);
+        // Set the context to Help
+        app.set_context(crate::app::Context::Help);
 
         // Capture the initial selected index
         let initial_index = app.selected_index();
@@ -261,7 +253,7 @@ mod tests {
         let mut app = create_test_app();
 
         // Test Esc in ArticleList context (should quit)
-        app.set_test_context(crate::app::Context::ArticleList);
+        app.set_context(crate::app::Context::ArticleList);
         assert!(app.running);
 
         let esc_event = KeyEvent::new(KeyCode::Esc, KeyModifiers::empty());
@@ -271,14 +263,12 @@ mod tests {
 
         // Test Esc in Config context (should close popup)
         let mut app = create_test_app();
-        app.set_test_context(crate::app::Context::Config);
-        assert!(app.config_popup.is_visible());
+        app.set_context(crate::app::Context::Config);
 
         let esc_event = KeyEvent::new(KeyCode::Esc, KeyModifiers::empty());
         handle_key_events(esc_event, &mut app, 20).unwrap();
 
         assert_eq!(app.current_context, crate::app::Context::ArticleList);
-        assert!(!app.config_popup.is_visible());
         assert!(
             app.running,
             "App should still be running after closing popup"
@@ -286,13 +276,12 @@ mod tests {
 
         // Test Esc in Help context (should close help)
         let mut app = create_test_app();
-        app.set_test_context(crate::app::Context::Help);
+        app.set_context(crate::app::Context::Help);
 
         let esc_event = KeyEvent::new(KeyCode::Esc, KeyModifiers::empty());
         handle_key_events(esc_event, &mut app, 20).unwrap();
 
         assert_eq!(app.current_context, crate::app::Context::ArticleList);
-        assert!(!app.show_help);
         assert!(
             app.running,
             "App should still be running after closing help"

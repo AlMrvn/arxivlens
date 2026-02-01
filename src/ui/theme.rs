@@ -49,6 +49,8 @@ pub struct LayoutTheme {
 pub struct ListTheme {
     pub item: Style,
     pub selected: Style,
+    pub selected_focused: Style,
+    pub selected_unfocused: Style,
     pub highlighted: Style,
     pub authors: Style,
     pub date: Style,
@@ -105,6 +107,8 @@ impl Default for Theme {
             list: ListTheme {
                 item: Style::new().fg(TEAL),
                 selected: Style::new().fg(Color::Black).bg(Color::White),
+                selected_focused: Style::new().fg(Color::Black).bg(Color::White),
+                selected_unfocused: Style::new().fg(Color::White).bg(DARK_GRAY),
                 highlighted: Style::new().fg(ORANGE).add_modifier(Modifier::BOLD),
                 authors: Style::new().fg(LIGHT_GRAY),
                 date: Style::new().fg(DARK_GRAY),

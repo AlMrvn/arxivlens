@@ -2,7 +2,7 @@ use crate::ui::theme::Theme;
 use ratatui::{layout::Rect, Frame};
 
 /// Core trait for all UI components in the application
-pub trait Component {
+pub trait Component<'a> {
     /// The state type this component operates on
     type State;
 
@@ -37,7 +37,7 @@ pub trait Component {
 }
 
 /// Trait for components that can be tested with golden files
-pub trait TestableComponent: Component {
+pub trait TestableComponent<'a>: Component<'a> {
     /// Create a test instance of this component with mock data
     fn create_test_instance() -> Self;
 
@@ -49,7 +49,7 @@ pub trait TestableComponent: Component {
 }
 
 /// Helper trait for components that manage their own layout
-pub trait LayoutComponent: Component {
+pub trait LayoutComponent<'a>: Component<'a> {
     /// Calculate the internal layout for this component
     fn calculate_layout(&self, area: Rect) -> ComponentLayout;
 }

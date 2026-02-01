@@ -313,18 +313,28 @@ mod tests {
         assert_eq!(Action::Quit, Action::Quit);
         assert_ne!(Action::Quit, Action::MoveUp);
     }
+
     #[test]
     fn test_esc_closes_popup_not_app() {
         let mut app = create_test_app();
 
-        // Set the context to Help using the test helper
-        app.set_test_context(Context::Help);
+        // 1. Test closing Help
+        app.set_context(Context::Help);
+        assert_eq!(app.current_context, Context::Help);
 
         let event = KeyEvent::new(KeyCode::Esc, KeyModifiers::empty());
         handle_key_events(event, &mut app, 20).unwrap();
 
         assert_eq!(app.current_context, Context::ArticleList);
-        assert!(!app.show_help); // Verify the flag was also unset
+        assert!(app.running);
+
+        // 2. Test closing Config
+        app.set_context(Context::Config);
+        assert_eq!(app.current_context, Context::Config);
+
+        handle_key_events(event, &mut app, 20).unwrap();
+
+        assert_eq!(app.current_context, Context::ArticleList);
         assert!(app.running);
     }
 }

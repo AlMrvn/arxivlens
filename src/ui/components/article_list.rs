@@ -7,9 +7,9 @@ use ratatui::{
 
 use crate::app::search::SearchState;
 use crate::arxiv::ArxivQueryResult;
+use crate::search::engine::SearchEngine;
 use crate::ui::component::{Component, ComponentLayout, LayoutComponent, TestableComponent};
 use crate::ui::theme::Theme;
-use crate::ui::utils::highlight_patterns;
 
 #[derive(Debug, Clone, Default)]
 pub struct ArticleListComponent {
@@ -20,6 +20,7 @@ pub struct ArticleListState<'a> {
     pub query_result: &'a ArxivQueryResult,
     pub list_state: &'a mut ListState,
     pub search_state: &'a SearchState,
+    pub search_engine: &'a mut SearchEngine,
     pub highlight_authors: Option<&'a [String]>,
     pub scrollbar_state: ScrollbarState,
 }
@@ -30,11 +31,11 @@ impl ArticleListComponent {
     }
     fn create_list_items<'a>(
         &self,
-        state: &ArticleListState<'a>,
+        state: &mut ArticleListState<'a>,
         theme: &Theme,
     ) -> Vec<ListItem<'a>> {
+        // 1. Get the correct subset of articles (already filtered by SearchEngine in App)
         let articles = if state.search_state.is_active() {
-            // Get filtered articles based on search
             state
                 .search_state
                 .filtered_indices
@@ -45,33 +46,36 @@ impl ArticleListComponent {
             state.query_result.articles.iter().collect()
         };
 
-        // Convert highlight_authors to owned strings for pattern matching
-        let highlight_patterns_vec: Option<Vec<String>> = state
-            .highlight_authors
-            .map(|authors| authors.iter().map(|s| s.to_string()).collect());
-
         articles
             .into_iter()
             .map(|article| {
+                // 2. Handle Title Highlighting (Fuzzy via SearchEngine)
                 let title_line = if state.search_state.is_active() {
-                    highlight_patterns(&article.title, None, theme)
+                    // Get indices from the contained SearchEngine
+                    let indices = state
+                        .search_engine
+                        .get_highlight_indices(&state.search_state.query, &article.title);
+                    // Use the new highlight.rs bridge
+                    crate::ui::highlight::Highlighter::fuzzy_line(&article.title, &indices, theme)
                 } else {
                     Line::from(Span::styled(article.title.clone(), theme.list.item))
                 };
 
-                let authors_patterns: Option<Vec<&str>> = highlight_patterns_vec
-                    .as_ref()
-                    .map(|v| v.iter().map(|s| s.as_str()).collect());
+                // 3. Handle Author Highlighting (Exact via Aho-Corasick)
+                // We use the simpler exact matcher here since author highlights
+                // are usually based on specific "Watched" names in config.
+                let authors_text = article.get_all_authors();
+                let author_patterns: Option<Vec<&str>> = state
+                    .highlight_authors
+                    .map(|authors| authors.iter().map(|s| s.as_str()).collect());
 
-                // If highlight_patterns returns Line<'a>, 'a cannot be local 'authors_text'
-                // We must pass a reference that outlives this closure iteration.
-                // If 'article' is already a reference from 'state', use it directly:
-                let authors_line = highlight_patterns(
-                    article.get_all_authors(),
-                    authors_patterns.as_deref(),
+                let authors_line = crate::ui::utils::highlight_patterns(
+                    authors_text,
+                    author_patterns.as_deref(), // Pass as Option<&[&str]>
                     theme,
                 );
 
+                // 4. Metadata Line
                 let date_line = Line::from(Span::styled(
                     format!("Published: {}", article.published),
                     theme.list.date,
@@ -82,32 +86,44 @@ impl ArticleListComponent {
             .collect()
     }
 }
-
-impl Component for ArticleListComponent {
-    type State = ArticleListState<'static>;
+impl<'a> Component<'a> for ArticleListComponent {
+    type State = ArticleListState<'a>;
 
     fn render(&self, frame: &mut Frame, area: Rect, state: &mut Self::State, theme: &Theme) {
-        let layout = self.calculate_layout(area);
+        tracing::debug!("Rendering {}, focused: {}", Self::test_name(), self.focused);
 
-        // Render border if present
-        if let Some(border_area) = layout.border {
-            let border_style = theme.get_border_style(self.focused, true);
-            let block = Block::default()
-                .borders(ratatui::widgets::Borders::ALL)
-                .border_set(theme.border.set)
-                .border_style(border_style)
-                .title("Articles")
-                .title_style(theme.title);
-            frame.render_widget(block, border_area);
-        }
-
-        // Create and render the list
+        // Create and render the list with unified block styling
         let items = self.create_list_items(state, theme);
+        let highlight_style = if self.focused {
+            theme.list.selected_focused
+        } else {
+            theme.list.selected_unfocused
+        };
+
+        let border_style = theme.get_border_style(self.focused, true);
+
+        let _border_type = if self.focused {
+            ratatui::widgets::BorderType::Thick
+        } else {
+            ratatui::widgets::BorderType::Plain
+        };
+
+        let block = Block::default()
+            .borders(ratatui::widgets::Borders::ALL)
+            .border_type(ratatui::widgets::BorderType::Rounded)
+            .border_style(border_style)
+            .title(format!(
+                " Articles {} ",
+                if self.focused { "(focused)" } else { "" }
+            ))
+            .title_style(theme.title);
+
         let list = List::new(items)
-            .highlight_style(theme.list.selected)
+            .block(block)
+            .highlight_style(highlight_style)
             .highlight_symbol("▶ ");
 
-        frame.render_stateful_widget(list, layout.content, state.list_state);
+        frame.render_stateful_widget(list, area, state.list_state);
 
         // Update and render scrollbar
         let visible_count = if state.search_state.is_active() {
@@ -141,7 +157,7 @@ impl Component for ArticleListComponent {
     }
 }
 
-impl LayoutComponent for ArticleListComponent {
+impl LayoutComponent<'_> for ArticleListComponent {
     fn calculate_layout(&self, area: Rect) -> ComponentLayout {
         let border_area = area;
         let content_area = Layout::default()
@@ -154,7 +170,7 @@ impl LayoutComponent for ArticleListComponent {
     }
 }
 
-impl TestableComponent for ArticleListComponent {
+impl TestableComponent<'_> for ArticleListComponent {
     fn create_test_instance() -> Self {
         Self::new()
     }
@@ -205,6 +221,8 @@ impl TestableComponent for ArticleListComponent {
         // Create mock search state and leak it
         let search_state = Box::leak(Box::new(SearchState::new()));
 
+        let search_engine = Box::leak(Box::new(SearchEngine::new()));
+
         // Create mock highlight authors and leak it
         let highlight_authors = Box::leak(Box::new(vec![
             "Alice Smith".to_string(),
@@ -217,6 +235,7 @@ impl TestableComponent for ArticleListComponent {
             search_state,
             highlight_authors: Some(highlight_authors),
             scrollbar_state: ScrollbarState::default(),
+            search_engine,
         }
     }
 
