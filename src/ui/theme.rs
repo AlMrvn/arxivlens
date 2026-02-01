@@ -155,6 +155,13 @@ impl Theme {
         }
     }
 
+    /// Get footer style with reversed colors
+    pub fn get_footer_style(&self) -> Style {
+        Style::default()
+            .bg(self.main.fg.unwrap_or(ratatui::style::Color::White))
+            .fg(self.main.bg.unwrap_or(ratatui::style::Color::Black))
+    }
+
     /// Create a centered popup area with theme-aware sizing
     pub fn centered_popup_area(
         &self,
