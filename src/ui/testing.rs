@@ -33,7 +33,7 @@ impl GoldenTester {
         height: u16,
     ) -> Result<(), Box<dyn std::error::Error>>
     where
-        C: TestableComponent,
+        C: for<'a> TestableComponent<'a>,
     {
         let backend = TestBackend::new(width, height);
         let mut terminal = Terminal::new(backend)?;
@@ -80,7 +80,7 @@ impl GoldenTester {
         component: &mut C,
     ) -> Result<(), Box<dyn std::error::Error>>
     where
-        C: TestableComponent,
+        C: for<'a> TestableComponent<'a>,
     {
         let sizes = vec![
             (80, 24),  // Standard terminal

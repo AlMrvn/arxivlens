@@ -22,24 +22,38 @@ impl SearchBarComponent {
     }
 }
 
-impl Component for SearchBarComponent {
-    type State = SearchBarState<'static>;
+impl<'a> Component<'a> for SearchBarComponent {
+    type State = SearchBarState<'a>;
 
     fn render(&self, frame: &mut Frame, area: Rect, state: &mut Self::State, theme: &Theme) {
+        tracing::debug!("Rendering {}, focused: {}", Self::test_name(), self.focused);
+
         if !state.visible {
             return;
         }
 
+        let border_style = theme.get_border_style(self.focused, true);
+
+        let _border_type = if self.focused {
+            ratatui::widgets::BorderType::Thick
+        } else {
+            ratatui::widgets::BorderType::Plain
+        };
+
         let block = Block::default()
             .borders(ratatui::widgets::Borders::ALL)
-            .border_set(theme.border.set)
-            .border_style(theme.get_border_style(self.focused, true))
-            .title("Search")
+            .border_type(ratatui::widgets::BorderType::Rounded)
+            .border_style(border_style)
+            .title(format!(
+                " Search {} ",
+                if self.focused { "(focused)" } else { "" }
+            ))
             .title_style(theme.title);
 
         let paragraph = Paragraph::new(state.query)
             .block(block)
-            .style(theme.search.input);
+            .style(theme.search.input)
+            .wrap(ratatui::widgets::Wrap { trim: true });
 
         frame.render_widget(paragraph, area);
     }
@@ -57,7 +71,7 @@ impl Component for SearchBarComponent {
     }
 }
 
-impl TestableComponent for SearchBarComponent {
+impl TestableComponent<'_> for SearchBarComponent {
     fn create_test_instance() -> Self {
         Self::new()
     }
