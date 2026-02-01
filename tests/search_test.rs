@@ -1,7 +1,6 @@
 use arxivlens::app::search::SearchState;
 use arxivlens::arxiv::{ArxivEntry, ArxivQueryResult};
 use serde::{Deserialize, Serialize};
-use serde_json;
 use std::fs;
 use std::path::PathBuf;
 
@@ -44,7 +43,7 @@ fn generate_test_dataset(size: usize) -> Vec<ArxivEntry> {
     if size > articles.len() {
         let mut id_counter = articles.len() + 1;
 
-        let noise_prefixes = vec![
+        let noise_prefixes = [
             "Analysis of",
             "Study on",
             "Investigation into",

@@ -18,7 +18,7 @@ pub fn handle_key_events(
 ) -> AppResult<()> {
     // Handle Tab key for focus switching in ArticleList context
     if app.current_context == crate::app::Context::ArticleList && key_event.code == KeyCode::Tab {
-        app.toggle_focus();
+        app.cycling_context();
         return Ok(());
     }
 
