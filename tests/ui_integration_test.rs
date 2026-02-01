@@ -1,6 +1,6 @@
 use arxivlens::app::{App, Context};
 use arxivlens::arxiv::{ArxivEntry, ArxivQueryResult};
-use arxivlens::config::{Config, HighlightConfig};
+use arxivlens::config::{Config, PinnedConfig};
 use arxivlens::ui::Theme;
 
 fn create_test_articles() -> Vec<ArxivEntry> {
@@ -56,15 +56,15 @@ fn test_search_integration_logic() {
         articles,
     };
 
-    let highlight_config = HighlightConfig {
-        authors: Some(vec!["Alice".to_string()]),
-        keywords: Some(vec!["programming".to_string()]),
+    let pinned_config = PinnedConfig {
+        authors: vec!["Alice".to_string()],
+        categories: vec!["programming".to_string()],
     };
 
     // Create app instance
     let mut app = App::new(
         &query_result,
-        &highlight_config,
+        &pinned_config,
         Theme::default(),
         Config::default(),
     );
@@ -97,11 +97,11 @@ fn test_search_with_no_matches() {
         updated: "2023-01-01".to_string(),
         articles,
     };
-    let highlight_config = HighlightConfig::default();
+    let pinned_config = PinnedConfig::default();
 
     let mut app = App::new(
         &query_result,
-        &highlight_config,
+        &pinned_config,
         Theme::default(),
         Config::default(),
     );
@@ -127,10 +127,10 @@ fn test_search_selection_reset_on_query_change() {
         updated: "2023-01-01".to_string(),
         articles,
     };
-    let highlight_config = HighlightConfig::default();
+    let pinned_config = PinnedConfig::default();
     let mut app = App::new(
         &query_result,
-        &highlight_config,
+        &pinned_config,
         Theme::default(),
         Config::default(),
     );

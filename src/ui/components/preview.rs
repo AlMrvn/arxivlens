@@ -2,8 +2,7 @@ use super::super::component::{Component, TestableComponent};
 use super::super::utils::highlight_patterns;
 use super::super::Theme;
 use crate::arxiv::ArxivEntry;
-use crate::config::HighlightConfig;
-use crate::ui::option_vec_to_option_slice;
+use crate::config::PinnedConfig;
 
 use itertools::izip;
 use ratatui::{
@@ -16,14 +15,14 @@ use ratatui::{
 /// State for the preview component
 pub struct PreviewState<'a> {
     pub article: Option<&'a ArxivEntry>,
-    pub highlight_config: &'a HighlightConfig,
+    pub pinned_config: &'a PinnedConfig,
 }
 
 impl<'a> PreviewState<'a> {
-    pub fn new(article: Option<&'a ArxivEntry>, highlight_config: &'a HighlightConfig) -> Self {
+    pub fn new(article: Option<&'a ArxivEntry>, pinned_config: &'a PinnedConfig) -> Self {
         Self {
             article,
-            highlight_config,
+            pinned_config,
         }
     }
 
@@ -36,6 +35,7 @@ impl<'a> PreviewState<'a> {
 #[derive(Debug)]
 pub struct PreviewComponent {
     focused: bool,
+    shortcut: Option<usize>,
 }
 
 /// Content data for rendering sections
@@ -48,24 +48,24 @@ struct SectionContent<'a> {
 
 impl PreviewComponent {
     pub fn new() -> Self {
-        Self { focused: false }
+        Self {
+            focused: false,
+            shortcut: Some(3),
+        }
     }
 
     /// Create the content lines for an article
     fn create_article_lines<'a>(
         &self,
         entry: &'a ArxivEntry,
-        highlight_config: &HighlightConfig,
+        pinned_config: &PinnedConfig,
         theme: &Theme,
     ) -> (Line<'a>, Line<'a>, Line<'a>, Line<'a>) {
-        let author_patterns = option_vec_to_option_slice(&highlight_config.authors);
-        let keyword_patterns = option_vec_to_option_slice(&highlight_config.keywords);
-
-        let title = highlight_patterns(&entry.title, keyword_patterns.as_deref(), theme);
-        let authors =
-            highlight_patterns(entry.get_all_authors(), author_patterns.as_deref(), theme);
-        let summary = highlight_patterns(&entry.summary, keyword_patterns.as_deref(), theme);
-        let updated = Line::raw(&entry.updated).style(theme.main);
+        let author_patterns: Vec<&str> = pinned_config.authors.iter().map(|s| s.as_str()).collect();
+        let title = highlight_patterns(&entry.title, None, theme);
+        let authors = highlight_patterns(entry.get_all_authors(), Some(&author_patterns), theme);
+        let summary = highlight_patterns(&entry.summary, None, theme);
+        let updated = Line::from(entry.updated.clone());
 
         (title, authors, summary, updated)
     }
@@ -144,11 +144,7 @@ impl<'a> Component<'a> for PreviewComponent {
             .borders(Borders::ALL)
             .border_type(BorderType::Rounded)
             .border_style(border_style)
-            .title(format!(
-                " Article Preview {} ",
-                if self.focused { "(focused)" } else { "" }
-            ))
-            .title_style(theme.title);
+            .title(theme.format_title(" Article Preview ", self.shortcut, self.focused));
 
         // Get the area inside the borders
         let inner_area = block.inner(area);
@@ -158,7 +154,7 @@ impl<'a> Component<'a> for PreviewComponent {
 
         // Render content inside inner_area
         let (title, authors, summary, updated) = match state.article {
-            Some(article) => self.create_article_lines(article, state.highlight_config, theme),
+            Some(article) => self.create_article_lines(article, state.pinned_config, theme),
             None => self.create_no_results_lines(theme),
         };
 
@@ -195,19 +191,18 @@ impl TestableComponent<'_> for PreviewComponent {
     }
 
     fn get_test_state() -> Self::State {
-        use crate::config::HighlightConfig;
+        use crate::config::PinnedConfig;
         use std::sync::OnceLock;
 
-        static TEST_HIGHLIGHT_CONFIG: OnceLock<HighlightConfig> = OnceLock::new();
-
-        let highlight_config = TEST_HIGHLIGHT_CONFIG.get_or_init(|| HighlightConfig {
-            keywords: Some(vec!["test".to_string()]),
-            authors: Some(vec!["Test Author".to_string()]),
+        static TEST_PINNED_CONFIG: OnceLock<PinnedConfig> = OnceLock::new();
+        let pinned_config = TEST_PINNED_CONFIG.get_or_init(|| PinnedConfig {
+            authors: vec!["Test Author".to_string()],
+            categories: vec!["quant-ph".to_string()],
         });
 
         PreviewState {
             article: None, // Will be set in actual tests
-            highlight_config,
+            pinned_config,
         }
     }
 

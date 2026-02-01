@@ -1,11 +1,12 @@
 use crate::arxiv::{ArxivEntry, ArxivQueryResult};
-use crate::config::{Config, HighlightConfig};
+use crate::config::{Config, PinnedConfig};
 use crate::search::engine::SearchEngine;
 use crate::ui::components::article_list::ArticleListComponent;
 use crate::ui::components::config_popup::ConfigPopupComponent;
 use crate::ui::components::help_popup::HelpPopupComponent;
 use crate::ui::components::preview::PreviewComponent;
 use crate::ui::components::search_bar::SearchBarComponent;
+use crate::ui::components::vip_feed::PinnedAuthorsComponent;
 use crate::ui::Component;
 use crate::ui::Theme;
 use arboard::Clipboard;
@@ -25,6 +26,7 @@ pub enum Context {
     Help,
     Search,
     Preview,
+    Pinned,
 }
 
 /// Search action for centralized search handling
@@ -46,7 +48,7 @@ pub struct App<'a> {
     /// Arxiv entry list:
     pub query_result: &'a ArxivQueryResult,
     /// Configuration for the hilighting
-    pub highlight_config: &'a HighlightConfig,
+    pub pinned_config: &'a PinnedConfig,
     /// Theme
     pub theme: Theme,
     /// Configuration
@@ -66,12 +68,15 @@ pub struct App<'a> {
     pub article_list: ArticleListComponent,
     pub preview: PreviewComponent,
     pub help_popup: HelpPopupComponent,
+    pub vip_feed: PinnedAuthorsComponent,
+    pub vip_feed_state: ratatui::widgets::ListState,
+    pub selected_pinned_author: Option<String>,
 }
 
 impl<'a> App<'a> {
     pub fn new(
         query_result: &'a ArxivQueryResult,
-        highlight_config: &'a HighlightConfig,
+        pinned_config: &'a PinnedConfig,
         theme: Theme,
         config: Config,
     ) -> Self {
@@ -82,7 +87,7 @@ impl<'a> App<'a> {
         Self {
             running: true,
             query_result,
-            highlight_config,
+            pinned_config,
             theme,
             config,
             current_context: Context::ArticleList,
@@ -95,6 +100,26 @@ impl<'a> App<'a> {
             preview: PreviewComponent::new(),
             config_popup: ConfigPopupComponent::new(),
             help_popup: HelpPopupComponent::new(),
+            vip_feed: PinnedAuthorsComponent::new(),
+            vip_feed_state: ratatui::widgets::ListState::default(),
+            selected_pinned_author: None,
+        }
+    }
+    /// Attempts to switch context based on a shortcut digit.
+    /// Returns true if a valid switch occurred.
+    pub fn navigate_to_shortcut(&mut self, index: usize) -> bool {
+        let new_context = match index {
+            1 => Some(crate::app::Context::Pinned),
+            2 => Some(crate::app::Context::ArticleList),
+            3 => Some(crate::app::Context::Preview),
+            _ => None,
+        };
+
+        if let Some(context) = new_context {
+            self.set_context(context);
+            true
+        } else {
+            false
         }
     }
 }
@@ -178,13 +203,22 @@ impl App<'_> {
         // 2. Update Source of Truth
         self.current_context = new_context;
 
-        // 3. Centralized Focus Management
+        // 3. Initialize VIP feed selection when transitioning to Pinned context
+        if new_context == Context::Pinned
+            && self.vip_feed_state.selected().is_none()
+            && self.get_vip_count() > 0
+        {
+            self.vip_feed_state.select(Some(0));
+        }
+
+        // 4. Centralized Focus Management
         // Blur everything first
         self.search_bar.on_blur();
         self.article_list.on_blur();
         self.preview.on_blur();
         self.config_popup.on_blur();
         self.help_popup.on_blur();
+        self.vip_feed.on_blur();
 
         // Focus only the active one
         match self.current_context {
@@ -193,6 +227,7 @@ impl App<'_> {
             Context::Preview => self.preview.on_focus(),
             Context::Config => self.config_popup.on_focus(),
             Context::Help => self.help_popup.on_focus(),
+            Context::Pinned => self.vip_feed.on_focus(),
         }
     }
 
@@ -200,6 +235,18 @@ impl App<'_> {
     pub fn perform_action(&mut self, action: actions::Action, terminal_height: u16) {
         match action {
             actions::Action::Quit => self.quit(),
+            actions::Action::MoveUp if self.current_context == Context::Pinned => {
+                let vip_count = self.get_vip_count();
+                if vip_count > 0 {
+                    self.vip_feed_state.select_previous();
+                }
+            }
+            actions::Action::MoveDown if self.current_context == Context::Pinned => {
+                let vip_count = self.get_vip_count();
+                if vip_count > 0 {
+                    self.vip_feed_state.select_next();
+                }
+            }
             actions::Action::MoveUp => self.article_list_state.select_previous(),
             actions::Action::MoveDown => self.article_list_state.select_next(),
             actions::Action::PageUp => {
@@ -242,7 +289,7 @@ impl App<'_> {
     pub fn selected_index(&self) -> Option<usize> {
         self.article_list_state.selected()
     }
-    /// Cycle focus through Search -> List -> Preview
+    /// Cycle focus through Search -> List -> Pinned -> Preview
     pub fn cycling_context(&mut self) {
         use tracing::info;
 
@@ -252,7 +299,11 @@ impl App<'_> {
                 Context::ArticleList
             }
             Context::ArticleList => {
-                info!("Cycling context: ArticleList -> Preview");
+                info!("Cycling context: ArticleList -> Pinned");
+                Context::Pinned
+            }
+            Context::Pinned => {
+                info!("Cycling context: Pinned -> Preview");
                 Context::Preview
             }
             Context::Preview => {
@@ -269,7 +320,34 @@ impl App<'_> {
         self.set_context(next_context);
     }
 
-    /// Get the currently visible articles (filtered or all)
+    /// Get VIP articles (papers by pinned authors)
+    pub fn get_vip_articles(&self) -> Vec<&ArxivEntry> {
+        let base_articles: Vec<&ArxivEntry> = if self.search_state.is_active() {
+            self.search_state
+                .filtered_indices
+                .iter()
+                .filter_map(|&index| self.query_result.articles.get(index))
+                .collect()
+        } else {
+            self.query_result.articles.iter().collect()
+        };
+
+        // Filter to only articles by pinned authors
+        base_articles
+            .into_iter()
+            .filter(|article| {
+                self.config.pinned.authors.iter().any(|pinned_author| {
+                    article.authors.iter().any(|author| {
+                        author
+                            .to_lowercase()
+                            .contains(&pinned_author.to_lowercase())
+                    })
+                })
+            })
+            .collect()
+    }
+
+    /// Get the currently visible articles (all articles, not filtered by pinned authors)
     pub fn get_visible_articles(&self) -> Vec<&ArxivEntry> {
         if self.search_state.is_active() {
             self.search_state
@@ -282,13 +360,33 @@ impl App<'_> {
         }
     }
 
-    /// Get the current article count (filtered or total)
-    pub fn get_visible_count(&mut self) -> usize {
-        if self.search_state.is_active() {
-            self.search_state.filtered_count()
+    pub fn update_selected_pinned_author(&mut self) {
+        // Ensure VIP feed selection is within bounds
+        let vip_count = self.get_vip_count();
+        if vip_count == 0 {
+            self.vip_feed_state.select(None);
+        } else if let Some(selected) = self.vip_feed_state.selected() {
+            if selected >= vip_count {
+                self.vip_feed_state.select(Some(vip_count - 1));
+            }
         } else {
-            self.query_result.articles.len()
+            // If no selection but articles exist, select first
+            self.vip_feed_state.select(Some(0));
         }
+
+        // This tells the search engine or the list to refresh
+        // based on who is highlighted in the top bar.
+        self.update_search_filter();
+    }
+
+    /// Get the current article count (all visible articles)
+    pub fn get_visible_count(&mut self) -> usize {
+        self.get_visible_articles().len()
+    }
+
+    /// Get the VIP article count
+    pub fn get_vip_count(&self) -> usize {
+        self.get_vip_articles().len()
     }
     /// Internal helper to sync the search engine with the UI state
     pub fn update_search_filter(&mut self) {
@@ -441,6 +539,34 @@ impl App<'_> {
             Some(&self.query_result.articles[0])
         }
     }
+
+    /// Get the currently selected VIP article
+    pub fn get_selected_vip_article(&self) -> Option<&ArxivEntry> {
+        if let Some(selected_idx) = self.vip_feed_state.selected() {
+            self.get_vip_articles().get(selected_idx).copied()
+        } else {
+            // If no selection but VIP articles exist, return first one
+            self.get_vip_articles().first().copied()
+        }
+    }
+
+    /// Get the article to display in preview (VIP feed takes priority)
+    pub fn get_preview_article(&self) -> Option<&ArxivEntry> {
+        if self.current_context == Context::Pinned {
+            // Return selected VIP article when VIP feed is focused
+            if let Some(selected_idx) = self.vip_feed_state.selected() {
+                self.get_vip_articles().get(selected_idx).copied()
+            } else {
+                // If no selection in VIP feed, show first VIP article if available
+                self.get_vip_articles().first().copied()
+            }
+        } else {
+            // Return selected article from main list
+            let selected_index = self.article_list_state.selected();
+            let visible_count = self.get_visible_articles().len();
+            self.get_selected_article_by_index(selected_index, visible_count)
+        }
+    }
 }
 
 #[cfg(test)]
@@ -449,11 +575,11 @@ pub mod tests {
 
     pub fn create_test_app() -> App<'static> {
         use crate::arxiv::{ArxivEntry, ArxivQueryResult};
-        use crate::config::HighlightConfig;
+        use crate::config::PinnedConfig;
         use std::sync::OnceLock;
 
         static RESULTS: OnceLock<ArxivQueryResult> = OnceLock::new();
-        static HIGHLIGHT: OnceLock<HighlightConfig> = OnceLock::new();
+        static PINNED: OnceLock<PinnedConfig> = OnceLock::new();
 
         let results = RESULTS.get_or_init(|| {
             let mut entries = Vec::new();
@@ -476,13 +602,14 @@ pub mod tests {
             }
         });
 
-        let highlight = HIGHLIGHT.get_or_init(|| HighlightConfig {
-            authors: Some(vec!["Alice".to_string()]),
-            keywords: Some(vec!["TUI".to_string()]),
+        let pinned = PINNED.get_or_init(|| PinnedConfig {
+            authors: vec!["Alice".to_string()],
+            categories: vec!["TUI".to_string()],
         });
 
-        App::new(results, highlight, Theme::default(), Config::default())
+        App::new(results, pinned, Theme::default(), Config::default())
     }
+
     #[test]
     fn test_app_creation() {
         let app = create_test_app();

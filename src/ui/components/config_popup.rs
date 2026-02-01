@@ -65,19 +65,20 @@ impl<'a> Component<'a> for ConfigPopupComponent {
             Line::from(Span::styled(" Highlighting: ", theme.help.section_title)),
         ];
 
-        let mut format_list = |label: &str, items: &Option<Vec<String>>| {
-            let val = match items {
-                Some(v) if !v.is_empty() => v.join(", "),
-                _ => "None".to_string(),
+        let mut format_list = |label: &str, items: &Vec<String>| {
+            let val = if !items.is_empty() {
+                items.join(", ")
+            } else {
+                "None".to_string()
             };
+
             lines.push(Line::from(vec![
                 Span::styled(format!("  {}: ", label), theme.help.key),
                 Span::styled(val, theme.help.description),
             ]));
         };
-
-        format_list("Keywords", &state.config.highlight.keywords);
-        format_list("Authors ", &state.config.highlight.authors);
+        format_list("Pinned Authors", &state.config.pinned.authors);
+        format_list("Pinned Categories", &state.config.pinned.categories);
 
         let paragraph = Paragraph::new(lines)
             .style(theme.popup.background)
@@ -122,7 +123,7 @@ impl TestableComponent<'_> for ConfigPopupComponent {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::{HighlightConfig, QueryConfig};
+    use crate::config::{PinnedConfig, QueryConfig};
     use ratatui::backend::TestBackend;
     use ratatui::Terminal;
 
@@ -131,9 +132,12 @@ mod tests {
             query: QueryConfig {
                 category: "quant-ph".to_string(),
             },
-            highlight: HighlightConfig {
-                keywords: Some(vec!["quantum".to_string()]),
-                authors: Some(vec!["Einstein".to_string()]),
+            pinned: PinnedConfig {
+                authors: vec!["Einstein".to_string()],
+                categories: vec!["quantum".to_string()],
+            },
+            storage: crate::config::StorageConfig {
+                database_name: "test.db".to_string(),
             },
         }
     }

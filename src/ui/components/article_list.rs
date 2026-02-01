@@ -14,6 +14,7 @@ use crate::ui::theme::Theme;
 #[derive(Debug, Clone, Default)]
 pub struct ArticleListComponent {
     focused: bool,
+    shortcut: Option<usize>,
 }
 
 pub struct ArticleListState<'a> {
@@ -27,7 +28,10 @@ pub struct ArticleListState<'a> {
 
 impl ArticleListComponent {
     pub fn new() -> Self {
-        Self { focused: false }
+        Self {
+            focused: false,
+            shortcut: Some(2),
+        }
     }
     fn create_list_items<'a>(
         &self,
@@ -112,11 +116,7 @@ impl<'a> Component<'a> for ArticleListComponent {
             .borders(ratatui::widgets::Borders::ALL)
             .border_type(ratatui::widgets::BorderType::Rounded)
             .border_style(border_style)
-            .title(format!(
-                " Articles {} ",
-                if self.focused { "(focused)" } else { "" }
-            ))
-            .title_style(theme.title);
+            .title(theme.format_title("Articles", self.shortcut, self.focused));
 
         let list = List::new(items)
             .block(block)
