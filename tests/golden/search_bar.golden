@@ -1,7 +1,7 @@
 CompletedFrame { buffer: Buffer {
     area: Rect { x: 0, y: 0, width: 80, height: 24 },
     content: [
-        "╭ Search  ─────────────────────────────────────────────────────────────────────╮",
+        "╭[/] Search ───────────────────────────────────────────────────────────────────╮",
         "│test query                                                                    │",
         "│                                                                              │",
         "│                                                                              │",
@@ -29,7 +29,7 @@ CompletedFrame { buffer: Buffer {
     styles: [
         x: 0, y: 0, fg: Rgb(128, 128, 128), bg: Black, underline: Reset, modifier: NONE,
         x: 1, y: 0, fg: Rgb(255, 165, 0), bg: Black, underline: Reset, modifier: BOLD,
-        x: 10, y: 0, fg: Rgb(128, 128, 128), bg: Black, underline: Reset, modifier: NONE,
+        x: 12, y: 0, fg: Rgb(128, 128, 128), bg: Black, underline: Reset, modifier: NONE,
         x: 1, y: 1, fg: White, bg: Black, underline: Reset, modifier: NONE,
         x: 79, y: 1, fg: Rgb(128, 128, 128), bg: Black, underline: Reset, modifier: NONE,
         x: 1, y: 2, fg: White, bg: Black, underline: Reset, modifier: NONE,

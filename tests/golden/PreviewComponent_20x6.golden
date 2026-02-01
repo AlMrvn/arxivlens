@@ -1,7 +1,7 @@
 CompletedFrame { buffer: Buffer {
     area: Rect { x: 0, y: 0, width: 20, height: 6 },
     content: [
-        "╭ Article Preview  ╮",
+        "╭[3]  Article Previ╮",
         "│                  │",
         "│  Abstract ────── │",
         "│   No articles    │",

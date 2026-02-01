@@ -32,7 +32,9 @@ pub struct Config {
     #[serde(default)]
     pub query: QueryConfig,
     #[serde(default)]
-    pub highlight: HighlightConfig,
+    pub pinned: PinnedConfig,
+    #[serde(default)]
+    pub storage: StorageConfig,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
@@ -41,12 +43,18 @@ pub struct QueryConfig {
     pub category: String,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Default)]
+pub struct PinnedConfig {
+    #[serde(default)]
+    pub authors: Vec<String>,
+    #[serde(default)]
+    pub categories: Vec<String>,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
-pub struct HighlightConfig {
-    #[serde(default = "query_default_keywords")]
-    pub keywords: Option<Vec<String>>,
-    #[serde(default = "query_default_authors")]
-    pub authors: Option<Vec<String>>,
+pub struct StorageConfig {
+    #[serde(default = "storage_default_database_name")]
+    pub database_name: String,
 }
 
 impl Default for QueryConfig {
@@ -57,11 +65,10 @@ impl Default for QueryConfig {
     }
 }
 
-impl Default for HighlightConfig {
+impl Default for StorageConfig {
     fn default() -> Self {
         Self {
-            keywords: query_default_keywords(),
-            authors: query_default_authors(),
+            database_name: storage_default_database_name(),
         }
     }
 }
@@ -69,11 +76,9 @@ impl Default for HighlightConfig {
 fn query_default_category() -> String {
     DEFAULT_ARXIV_CATEGORY.to_string()
 }
-fn query_default_keywords() -> Option<Vec<String>> {
-    None
-}
-fn query_default_authors() -> Option<Vec<String>> {
-    None
+
+fn storage_default_database_name() -> String {
+    "starred.db".to_string()
 }
 
 impl Config {
@@ -107,8 +112,9 @@ mod tests {
     fn test_load_default_config() {
         let config = Config::default();
         assert_eq!(config.query.category, DEFAULT_ARXIV_CATEGORY);
-        assert_eq!(config.highlight.keywords, None);
-        assert_eq!(config.highlight.authors, None);
+        assert_eq!(config.pinned.authors, Vec::<String>::new());
+        assert_eq!(config.pinned.categories, Vec::<String>::new());
+        assert_eq!(config.storage.database_name, "starred.db");
     }
 
     #[test]
@@ -119,19 +125,23 @@ mod tests {
             [query]
             category = "cs.AI"
             
-            [highlight]
+            [pinned]
             authors = ["Test Author"]
-            keywords = ["quantum"]
+            categories = ["quant-ph", "cs.AI"]
+            
+            [storage]
+            database_name = "custom.db"
         "#;
         fs::write(&config_path, config_content).unwrap();
 
         let config = Config::load_from_file(config_path)?;
         assert_eq!(config.query.category, "cs.AI");
+        assert_eq!(config.pinned.authors, vec!["Test Author".to_string()]);
         assert_eq!(
-            config.highlight.authors,
-            Some(vec!["Test Author".to_string()])
+            config.pinned.categories,
+            vec!["quant-ph".to_string(), "cs.AI".to_string()]
         );
-        assert_eq!(config.highlight.keywords, Some(vec!["quantum".to_string()]));
+        assert_eq!(config.storage.database_name, "custom.db");
 
         Ok(())
     }
@@ -161,7 +171,7 @@ mod tests {
     fn test_partial_config() -> Result<(), ConfigError> {
         let temp_dir = TempDir::new().unwrap();
         let config_path = temp_dir.path().join("config.toml");
-        // Only specify query section, highlight should use defaults
+        // Only specify query section, pinned and storage should use defaults
         let config_content = r#"
             [query]
             category = "math.AG"
@@ -170,8 +180,9 @@ mod tests {
 
         let config = Config::load_from_file(config_path)?;
         assert_eq!(config.query.category, "math.AG");
-        assert_eq!(config.highlight.keywords, None);
-        assert_eq!(config.highlight.authors, None);
+        assert_eq!(config.pinned.authors, Vec::<String>::new());
+        assert_eq!(config.pinned.categories, Vec::<String>::new());
+        assert_eq!(config.storage.database_name, "starred.db");
 
         Ok(())
     }
@@ -185,43 +196,48 @@ mod tests {
         let config = Config::load_from_file(config_path)?;
         // Should use all defaults
         assert_eq!(config.query.category, DEFAULT_ARXIV_CATEGORY);
-        assert_eq!(config.highlight.keywords, None);
-        assert_eq!(config.highlight.authors, None);
+        assert_eq!(config.pinned.authors, Vec::<String>::new());
+        assert_eq!(config.pinned.categories, Vec::<String>::new());
+        assert_eq!(config.storage.database_name, "starred.db");
 
         Ok(())
     }
 
     #[test]
-    fn test_multiple_authors_and_keywords() -> Result<(), ConfigError> {
+    fn test_multiple_authors_and_categories() -> Result<(), ConfigError> {
         let temp_dir = TempDir::new().unwrap();
         let config_path = temp_dir.path().join("config.toml");
         let config_content = r#"
             [query]
             category = "quant-ph"
             
-            [highlight]
+            [pinned]
             authors = ["Einstein", "Bohr", "Heisenberg"]
-            keywords = ["quantum", "entanglement", "superposition"]
+            categories = ["quant-ph", "cond-mat", "hep-th"]
+            
+            [storage]
+            database_name = "physics.db"
         "#;
         fs::write(&config_path, config_content).unwrap();
 
         let config = Config::load_from_file(config_path)?;
         assert_eq!(
-            config.highlight.authors,
-            Some(vec![
+            config.pinned.authors,
+            vec![
                 "Einstein".to_string(),
                 "Bohr".to_string(),
                 "Heisenberg".to_string()
-            ])
+            ]
         );
         assert_eq!(
-            config.highlight.keywords,
-            Some(vec![
-                "quantum".to_string(),
-                "entanglement".to_string(),
-                "superposition".to_string()
-            ])
+            config.pinned.categories,
+            vec![
+                "quant-ph".to_string(),
+                "cond-mat".to_string(),
+                "hep-th".to_string()
+            ]
         );
+        assert_eq!(config.storage.database_name, "physics.db");
 
         Ok(())
     }
@@ -252,45 +268,45 @@ mod tests {
             [query]
             category = "QUANT-PH"  # Different case from default
             
-            [highlight]
+            [pinned]
             authors = ["EINSTEIN", "Bohr", "heisenberg"]
-            keywords = ["QUANTUM", "Entanglement", "superposition"]
+            categories = ["QUANT-PH", "Cond-Mat", "hep-th"]
         "#;
         fs::write(&config_path, config_content).unwrap();
 
         let config = Config::load_from_file(config_path)?;
         assert_eq!(config.query.category, "QUANT-PH"); // Category should preserve case
         assert_eq!(
-            config.highlight.authors,
-            Some(vec![
+            config.pinned.authors,
+            vec![
                 "EINSTEIN".to_string(),
                 "Bohr".to_string(),
                 "heisenberg".to_string()
-            ])
+            ]
         );
         assert_eq!(
-            config.highlight.keywords,
-            Some(vec![
-                "QUANTUM".to_string(),
-                "Entanglement".to_string(),
-                "superposition".to_string()
-            ])
+            config.pinned.categories,
+            vec![
+                "QUANT-PH".to_string(),
+                "Cond-Mat".to_string(),
+                "hep-th".to_string()
+            ]
         );
 
         Ok(())
     }
 
     #[test]
-    fn test_invalid_highlight_format() {
+    fn test_invalid_pinned_format() {
         let temp_dir = TempDir::new().unwrap();
         let config_path = temp_dir.path().join("config.toml");
         let config_content = r#"
             [query]
             category = "quant-ph"
             
-            [highlight]
+            [pinned]
             authors = "Einstein"  # Should be an array, not a string
-            keywords = ["quantum"]
+            categories = ["quant-ph"]
         "#;
         fs::write(&config_path, config_content).unwrap();
 
@@ -306,7 +322,7 @@ mod tests {
             [query]
             category = "quant-ph"
             
-            [highlight]
+            [pinned]
             authors = ["Einstein"]
             
             [query]  # Duplicate section
@@ -316,6 +332,27 @@ mod tests {
 
         let result = Config::load_from_file(config_path);
         assert!(matches!(result, Err(ConfigError::ParseError(_))));
+    }
+
+    #[test]
+    fn test_storage_config_defaults() -> Result<(), ConfigError> {
+        let temp_dir = TempDir::new().unwrap();
+        let config_path = temp_dir.path().join("config.toml");
+        let config_content = r#"
+            [query]
+            category = "quant-ph"
+            
+            [pinned]
+            authors = ["Einstein"]
+            categories = ["quant-ph"]
+            # No storage section - should use defaults
+        "#;
+        fs::write(&config_path, config_content).unwrap();
+
+        let config = Config::load_from_file(config_path)?;
+        assert_eq!(config.storage.database_name, "starred.db");
+
+        Ok(())
     }
 
     #[test]

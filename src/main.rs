@@ -62,10 +62,10 @@ fn main() -> AppResult<()> {
         ArxivQueryResult::from_query(query).map_err(|e| format!("Failed to query arXiv: {e}"))?;
 
     // Create a longer-lived value for the highlight config
-    let highlight_config = config.highlight.clone();
+    let pinned_config = config.pinned.clone();
 
     // Create an application.
-    let mut app = App::new(&query_result, &highlight_config, theme, config);
+    let mut app = App::new(&query_result, &pinned_config, theme, config);
 
     // Initialize the terminal user interface.
     let backend = CrosstermBackend::new(io::stderr());

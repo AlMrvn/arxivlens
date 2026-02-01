@@ -16,21 +16,7 @@ pub fn handle_key_events(
     app: &mut App,
     terminal_height: u16,
 ) -> AppResult<()> {
-    // Handle Tab key for focus switching in ArticleList context
-    if app.current_context == crate::app::Context::ArticleList && key_event.code == KeyCode::Tab {
-        app.cycling_context();
-        return Ok(());
-    }
-
-    // Handle entering search mode from ArticleList context
-    if app.current_context == crate::app::Context::ArticleList
-        && key_event.code == KeyCode::Char('/')
-    {
-        app.set_context(crate::app::Context::Search);
-        return Ok(());
-    }
-
-    // Handle search input when in search context
+    // 1. Modal Logic: If we are typing a search, handle characters directly
     if matches!(app.current_context, crate::app::Context::Search) {
         match key_event.code {
             KeyCode::Char(c) => {
@@ -41,29 +27,30 @@ pub fn handle_key_events(
                 app.handle_search_backspace();
                 return Ok(());
             }
-            KeyCode::Esc => {
-                // Exit search mode and return to article list
+            KeyCode::Esc | KeyCode::Enter => {
                 app.set_context(crate::app::Context::ArticleList);
                 return Ok(());
             }
-            KeyCode::Enter => {
-                // Exit search mode and return to article list
-                app.set_context(crate::app::Context::ArticleList);
-                return Ok(());
-            }
-            _ => {
-                // Fall through to normal action handling for other keys like Esc
+            _ => {} // Ignore other keys while searching
+        }
+    }
+
+    // 2. Global Navigation: LazyGit-style shortcuts
+    // This intercepts digits 1-9 to switch contexts globally
+    if let KeyCode::Char(c) = key_event.code {
+        if c.is_ascii_digit() && c != '0' {
+            let digit = c.to_digit(10).unwrap() as usize;
+            if app.navigate_to_shortcut(digit) {
+                return Ok(()); // Shortcut handled, stop processing
             }
         }
     }
 
+    // 2. Action Logic: For everything else, use the KEY_MAP
     if let Some(action) = map_key_to_action(key_event) {
-        // Check if the action is valid in the current context
-        if !action.is_valid_in(&app.current_context) {
-            return Ok(());
+        if action.is_valid_in(&app.current_context) {
+            app.perform_action(action, terminal_height);
         }
-
-        app.perform_action(action, terminal_height);
     }
 
     Ok(())

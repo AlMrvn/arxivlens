@@ -1,8 +1,9 @@
 use crate::ui::component::{Component, TestableComponent};
 use crate::ui::theme::Theme;
+use ratatui::text::{Line, Span};
 use ratatui::{
     layout::Rect,
-    widgets::{Block, Paragraph},
+    widgets::{Block, BorderType, Borders, Paragraph, Wrap},
     Frame,
 };
 
@@ -32,28 +33,27 @@ impl<'a> Component<'a> for SearchBarComponent {
             return;
         }
 
-        let border_style = theme.get_border_style(self.focused, true);
-
         let _border_type = if self.focused {
             ratatui::widgets::BorderType::Thick
         } else {
             ratatui::widgets::BorderType::Plain
         };
 
+        let search_title = Line::from(vec![
+            Span::styled("[/]", theme.shortcut),
+            Span::styled(" Search ", theme.title),
+        ]);
+
         let block = Block::default()
-            .borders(ratatui::widgets::Borders::ALL)
-            .border_type(ratatui::widgets::BorderType::Rounded)
-            .border_style(border_style)
-            .title(format!(
-                " Search {} ",
-                if self.focused { "(focused)" } else { "" }
-            ))
-            .title_style(theme.title);
+            .borders(Borders::ALL)
+            .border_type(BorderType::Rounded)
+            .title(search_title)
+            .border_style(theme.get_border_style(self.focused, true));
 
         let paragraph = Paragraph::new(state.query)
             .block(block)
             .style(theme.search.input)
-            .wrap(ratatui::widgets::Wrap { trim: true });
+            .wrap(Wrap { trim: true });
 
         frame.render_widget(paragraph, area);
     }

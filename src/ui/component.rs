@@ -34,6 +34,11 @@ pub trait Component<'a> {
 
     /// Called when component loses focus
     fn on_blur(&mut self) {}
+
+    /// Returns the shortcut digit for this component (e.g., Some(1))
+    fn shortcut(&self) -> Option<usize> {
+        None
+    }
 }
 
 /// Trait for components that can be tested with golden files

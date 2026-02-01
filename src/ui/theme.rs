@@ -1,5 +1,6 @@
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::symbols::border;
+use ratatui::text::{Line, Span};
 use serde::{Deserialize, Serialize};
 
 const TEAL: Color = Color::Rgb(0, 128, 128);
@@ -86,7 +87,7 @@ impl Default for Theme {
         Self {
             main: Style::new().fg(TEAL).bg(Color::Black),
             title: Style::new().fg(ORANGE).add_modifier(Modifier::BOLD),
-            shortcut: Style::new().fg(Color::Blue).bg(Color::Black),
+            shortcut: Style::new().fg(ORANGE).add_modifier(Modifier::BOLD),
             highlight: Style::new().fg(ORANGE).bg(Color::Black),
             selection: Style::new().fg(Color::Black).bg(Color::White),
 
@@ -188,6 +189,30 @@ impl Theme {
                 Constraint::Percentage((100 - percent_x) / 2),
             ])
             .split(popup_layout[1])[1]
+    }
+    /// Creates a styled title line with an optional shortcut number
+    pub fn format_title<'a>(
+        &self,
+        title: &'a str,
+        shortcut: Option<usize>,
+        focused: bool,
+    ) -> Line<'a> {
+        let mut spans = Vec::new();
+
+        // 1. Add shortcut: "[1] "
+        if let Some(n) = shortcut {
+            spans.push(Span::styled(format!("[{}] ", n), self.shortcut));
+        }
+
+        // 2. Add the main title text
+        spans.push(Span::styled(title, self.title));
+
+        // 3. Optional focus indicator
+        if focused {
+            spans.push(Span::styled(" (focused)", self.border.focused));
+        }
+
+        Line::from(spans)
     }
 }
 
