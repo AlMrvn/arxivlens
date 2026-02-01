@@ -1,3 +1,5 @@
+use crate::app::Context;
+use crate::app::SearchAction;
 use ratatui::crossterm::event::{KeyCode, KeyModifiers};
 use std::collections::HashMap;
 
@@ -28,6 +30,9 @@ pub enum Action {
     ClosePopup,
     /// Enter search mode
     Search,
+    /// Typing in the search
+    SearchInput(SearchAction),
+    ToggleFocus,
 }
 
 impl Action {
@@ -43,11 +48,13 @@ impl Action {
             | Action::PageDown
             | Action::GoToTop
             | Action::GoToBottom
-            | Action::YankId => *context == crate::app::Context::ArticleList,
+            | Action::YankId => *context == Context::ArticleList,
             // ClosePopup is always valid - behavior depends on context
             Action::ClosePopup => true,
             // Search is always valid
             Action::Search => true,
+            Action::ToggleFocus => true,
+            Action::SearchInput(_) => *context == Context::Search,
         }
     }
 
@@ -66,6 +73,8 @@ impl Action {
             Action::YankId => "Yank",
             Action::ClosePopup => "Close/Quit",
             Action::Search => "Search",
+            Action::ToggleFocus => "Toggle Focus",
+            Action::SearchInput(_) => "Type to search",
         }
     }
 }
@@ -193,6 +202,12 @@ pub const KEY_MAP: &[KeyBind] = &[
         action: Action::Search,
         is_primary: true,
     },
+    KeyBind {
+        key: KeyCode::Tab,
+        modifiers: KeyModifiers::empty(),
+        action: Action::ToggleFocus,
+        is_primary: true,
+    },
 ];
 
 /// Helper function to create a HashMap from the key mappings for quick lookup
@@ -285,7 +300,7 @@ mod tests {
     #[test]
     fn test_key_map_size() {
         let key_map = create_key_map();
-        assert_eq!(key_map.len(), 16);
+        assert_eq!(key_map.len(), 17);
     }
 
     #[test]

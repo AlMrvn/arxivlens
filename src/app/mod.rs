@@ -13,7 +13,7 @@ pub mod actions;
 pub mod search;
 
 /// Application context enum to track current UI state
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Context {
     ArticleList,
     Config,
@@ -22,7 +22,7 @@ pub enum Context {
 }
 
 /// Search action for centralized search handling
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum SearchAction {
     PushChar(char),
     PopChar,
@@ -189,12 +189,22 @@ impl App<'_> {
             actions::Action::Search => {
                 self.set_context(Context::Search);
             }
+            actions::Action::ToggleFocus => self.toggle_focus(),
             actions::Action::ClosePopup => {
                 if self.current_context == Context::ArticleList {
                     self.quit(); // Quit if no popup is open
                 } else {
                     self.set_context(Context::ArticleList);
                 }
+            }
+            actions::Action::SearchInput(search_act) => {
+                match search_act {
+                    SearchAction::PushChar(c) => self.search_state.push_char(c),
+                    SearchAction::PopChar => self.search_state.pop_char(),
+                    SearchAction::Clear => self.search_state.clear(),
+                }
+                self.update_search_filter();
+                self.sync_selection_to_filter();
             }
         }
     }
