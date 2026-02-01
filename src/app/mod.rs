@@ -1,7 +1,12 @@
 use crate::arxiv::{ArxivEntry, ArxivQueryResult};
 use crate::config::{Config, HighlightConfig};
 use crate::search::engine::SearchEngine;
+use crate::ui::components::article_list::ArticleListComponent;
 use crate::ui::components::config_popup::ConfigPopupComponent;
+use crate::ui::components::help_popup::HelpPopupComponent;
+use crate::ui::components::preview::PreviewComponent;
+use crate::ui::components::search_bar::SearchBarComponent;
+use crate::ui::Component;
 use crate::ui::Theme;
 use arboard::Clipboard;
 use search::SearchState;
@@ -19,6 +24,7 @@ pub enum Context {
     Config,
     Help,
     Search,
+    Preview,
 }
 
 /// Search action for centralized search handling
@@ -43,8 +49,6 @@ pub struct App<'a> {
     pub highlight_config: &'a HighlightConfig,
     /// Theme
     pub theme: Theme,
-    /// Configuration popup
-    pub config_popup: ConfigPopupComponent,
     /// Configuration
     pub config: Config,
     /// Current application context
@@ -55,6 +59,13 @@ pub struct App<'a> {
     pub article_list_state: ratatui::widgets::ListState,
     /// Search Engine for fuzzy-matching
     pub search_engine: SearchEngine,
+
+    // --- Component Fields ---
+    pub config_popup: ConfigPopupComponent,
+    pub search_bar: SearchBarComponent,
+    pub article_list: ArticleListComponent,
+    pub preview: PreviewComponent,
+    pub help_popup: HelpPopupComponent,
 }
 
 impl<'a> App<'a> {
@@ -73,12 +84,17 @@ impl<'a> App<'a> {
             query_result,
             highlight_config,
             theme,
-            config_popup: ConfigPopupComponent::new(),
             config,
             current_context: Context::ArticleList,
             search_state,
             article_list_state: ratatui::widgets::ListState::default(),
             search_engine: crate::search::engine::SearchEngine::new(),
+            // --- Component Initialization ---
+            search_bar: SearchBarComponent::new(),
+            article_list: ArticleListComponent::new(),
+            preview: PreviewComponent::new(),
+            config_popup: ConfigPopupComponent::new(),
+            help_popup: HelpPopupComponent::new(),
         }
     }
 }
@@ -136,18 +152,15 @@ impl App<'_> {
 
     /// Method to centralize context transitions and handle all side effects
     pub fn set_context(&mut self, new_context: Context) {
-        // Handle special logic when transitioning from search context
+        // 1. Existing Search Transition Logic
         if self.current_context == Context::Search && new_context == Context::ArticleList {
-            // Get the actual global index of the currently selected filtered item
             let actual_selection = self
                 .article_list_state
                 .selected()
                 .and_then(|visible_idx| self.get_actual_article_index(visible_idx));
 
-            // Clear search state when leaving search
             self.search_state.clear();
 
-            // Restore selection to the actual global index if it was valid
             if let Some(global_index) = actual_selection {
                 if global_index < self.query_result.articles.len() {
                     self.article_list_state.select(Some(global_index));
@@ -155,7 +168,6 @@ impl App<'_> {
             }
         }
 
-        // Handle search initialization
         if new_context == Context::Search {
             self.search_state.set_articles(&self.query_result.articles);
             if !self.search_state.is_active() {
@@ -163,8 +175,25 @@ impl App<'_> {
             }
         }
 
-        // Update the context - this is the single source of truth
+        // 2. Update Source of Truth
         self.current_context = new_context;
+
+        // 3. Centralized Focus Management
+        // Blur everything first
+        self.search_bar.on_blur();
+        self.article_list.on_blur();
+        self.preview.on_blur();
+        self.config_popup.on_blur();
+        self.help_popup.on_blur();
+
+        // Focus only the active one
+        match self.current_context {
+            Context::Search => self.search_bar.on_focus(),
+            Context::ArticleList => self.article_list.on_focus(),
+            Context::Preview => self.preview.on_focus(),
+            Context::Config => self.config_popup.on_focus(),
+            Context::Help => self.help_popup.on_focus(),
+        }
     }
 
     /// Perform the given action with the provided terminal height
@@ -189,7 +218,7 @@ impl App<'_> {
             actions::Action::Search => {
                 self.set_context(Context::Search);
             }
-            actions::Action::ToggleFocus => self.toggle_focus(),
+            actions::Action::CycleFocus => self.cycling_context(),
             actions::Action::ClosePopup => {
                 if self.current_context == Context::ArticleList {
                     self.quit(); // Quit if no popup is open
@@ -213,22 +242,31 @@ impl App<'_> {
     pub fn selected_index(&self) -> Option<usize> {
         self.article_list_state.selected()
     }
-
-    /// Toggle focus between components
-    pub fn toggle_focus(&mut self) {
+    /// Cycle focus through Search -> List -> Preview
+    pub fn cycling_context(&mut self) {
         use tracing::info;
 
-        match self.current_context {
-            Context::ArticleList => {
-                self.set_context(Context::Search);
-                info!("Focus toggled: currently focusing SearchBar");
-            }
+        let next_context = match self.current_context {
             Context::Search => {
-                self.set_context(Context::ArticleList);
-                info!("Focus toggled: currently focusing ArticleList");
+                info!("Cycling context: Search -> ArticleList");
+                Context::ArticleList
             }
-            _ => {} // No focus toggle for other contexts
-        }
+            Context::ArticleList => {
+                info!("Cycling context: ArticleList -> Preview");
+                Context::Preview
+            }
+            Context::Preview => {
+                info!("Cycling context: Preview -> Search");
+                Context::Search
+            }
+            // Fallback: If in Help or an error state, go back to the list
+            _ => {
+                info!("Cycling context: Returning to ArticleList");
+                Context::ArticleList
+            }
+        };
+
+        self.set_context(next_context);
     }
 
     /// Get the currently visible articles (filtered or all)

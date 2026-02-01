@@ -32,7 +32,7 @@ pub enum Action {
     Search,
     /// Typing in the search
     SearchInput(SearchAction),
-    ToggleFocus,
+    CycleFocus,
 }
 
 impl Action {
@@ -53,7 +53,7 @@ impl Action {
             Action::ClosePopup => true,
             // Search is always valid
             Action::Search => true,
-            Action::ToggleFocus => true,
+            Action::CycleFocus => true,
             Action::SearchInput(_) => *context == Context::Search,
         }
     }
@@ -73,7 +73,7 @@ impl Action {
             Action::YankId => "Yank",
             Action::ClosePopup => "Close/Quit",
             Action::Search => "Search",
-            Action::ToggleFocus => "Toggle Focus",
+            Action::CycleFocus => "Cycle Focus",
             Action::SearchInput(_) => "Type to search",
         }
     }
@@ -205,7 +205,7 @@ pub const KEY_MAP: &[KeyBind] = &[
     KeyBind {
         key: KeyCode::Tab,
         modifiers: KeyModifiers::empty(),
-        action: Action::ToggleFocus,
+        action: Action::CycleFocus,
         is_primary: true,
     },
 ];
@@ -237,7 +237,7 @@ mod tests {
         assert_eq!(kb.key, KeyCode::Char('q'));
         assert_eq!(kb.modifiers, KeyModifiers::empty());
         assert_eq!(kb.action, Action::Quit);
-        assert_eq!(kb.is_primary, true);
+        assert!(kb.is_primary);
     }
 
     #[test]

@@ -1,6 +1,5 @@
 pub mod component;
 pub mod components;
-pub mod detail;
 pub mod footer;
 pub mod highlight;
 pub mod search;
@@ -10,7 +9,6 @@ pub mod theme;
 pub mod utils;
 
 // Legacy exports (to maintain compatibility during transition)
-pub use detail::ArticleDetails;
 pub use footer::render_footer;
 pub use search::render_search_bar;
 pub use style::Theme as LegacyTheme;
@@ -19,7 +17,8 @@ pub use utils::option_vec_to_option_slice;
 // New component-based architecture exports
 pub use component::{Component, ComponentLayout, LayoutComponent, TestableComponent};
 pub use components::{
-    ArticleListComponent, ConfigPopupComponent, HelpPopupComponent, SearchBarComponent,
+    ArticleListComponent, ConfigPopupComponent, HelpPopupComponent, PreviewComponent,
+    SearchBarComponent,
 };
 pub use testing::GoldenTester;
 pub use theme::Theme;
@@ -52,13 +51,19 @@ pub fn render(app: &mut App, frame: &mut Frame) {
     // 2. Component setup & Focus Management
     let mut search_bar = SearchBarComponent::new();
     let mut article_list = ArticleListComponent::new();
+    let mut preview_component = PreviewComponent::new();
 
-    if matches!(app.current_context, Context::Search) {
-        search_bar.on_focus();
-        article_list.on_blur();
-    } else {
-        search_bar.on_blur();
-        article_list.on_focus();
+    match app.current_context {
+        Context::Search => {
+            search_bar.on_focus();
+        }
+        Context::ArticleList => {
+            article_list.on_focus();
+        }
+        Context::Preview => {
+            preview_component.on_focus();
+        }
+        _ => {}
     }
 
     // 3. Rendering - Using the Component Trait
@@ -87,14 +92,11 @@ pub fn render(app: &mut App, frame: &mut Frame) {
         article_list.render(frame, main_layout[0], &mut article_state, &app.theme);
     }
 
-    // --- Render Article Details (Right Side) ---
-    // We use the app helper to find the currently selected article
-    if let Some(entry) = app.get_selected_article_by_index(selected_index, visible_count) {
-        let details = ArticleDetails::new(entry, app.highlight_config, &app.theme);
-        details.render(frame, main_layout[1], &app.theme);
-    } else {
-        ArticleDetails::no_results(&app.theme).render(frame, main_layout[1], &app.theme);
-    }
+    // --- Render Article Preview (Right Side) ---
+    let selected_article = app.get_selected_article_by_index(selected_index, visible_count);
+    let mut preview_state =
+        components::preview::PreviewState::new(selected_article, app.highlight_config);
+    preview_component.render(frame, main_layout[1], &mut preview_state, &app.theme);
 
     // --- Render Footer ---
     render_footer(frame, layout[2], app);

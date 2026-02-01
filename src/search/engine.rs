@@ -368,7 +368,7 @@ mod tests {
         let mut default_engine = SearchEngine::new();
         let default_results = default_engine.filter("Learning", &data);
         assert!(
-            default_results.len() > 0,
+            !default_results.is_empty(),
             "Default engine should find matches"
         );
     }
