@@ -1,4 +1,4 @@
-use crate::app::{actions::KEY_MAP, App, Context};
+use crate::app::{actions::KEY_MAP, Context};
 use crate::ui::{component::Component, theme::Theme};
 use ratatui::{
     layout::Rect,
@@ -13,6 +13,7 @@ pub struct FooterComponent {
 }
 
 pub struct FooterState {
+    pub current_context: Context,
     pub visible: bool,
 }
 
@@ -25,7 +26,7 @@ impl FooterComponent {
 impl Component<'_> for FooterComponent {
     type State = FooterState;
 
-    fn render(&self, frame: &mut Frame, area: Rect, state: &mut Self::State<'_>, theme: &Theme) {
+    fn render(&self, frame: &mut Frame, area: Rect, state: &mut Self::State, theme: &Theme) {
         if !state.visible {
             return;
         }
@@ -36,7 +37,7 @@ impl Component<'_> for FooterComponent {
         }
 
         // Special handling for Search context
-        if state.app.current_context == Context::Search {
+        if state.current_context == Context::Search {
             let search_shortcuts = vec![
                 ("[Esc]".to_string(), "Cancel".to_string()),
                 ("[Enter]".to_string(), "Apply".to_string()),
@@ -59,7 +60,7 @@ impl Component<'_> for FooterComponent {
         let primary_keybinds: Vec<_> = KEY_MAP
             .iter()
             .filter(|keybind| {
-                keybind.is_primary && keybind.action.is_valid_in(&state.app.current_context)
+                keybind.is_primary && keybind.action.is_valid_in(&state.current_context)
             })
             .collect();
 
@@ -208,16 +209,14 @@ fn build_footer_line(shortcuts: &[(String, String)], available_width: u16) -> Li
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::app::tests::create_test_app;
     use ratatui::backend::TestBackend;
     use ratatui::layout::Rect;
     use ratatui::Terminal;
 
     #[test]
     fn test_footer_component_responsive_width() {
-        let app = create_test_app();
         let theme = Theme::default();
-        let mut footer_component = FooterComponent::new();
+        let footer_component = FooterComponent::new();
         let mut terminal = Terminal::new(TestBackend::new(120, 10)).unwrap();
 
         // Test with narrow width (30 characters)
@@ -226,7 +225,7 @@ mod tests {
         terminal
             .draw(|frame| {
                 let mut state = FooterState {
-                    app: &app,
+                    current_context: Context::ArticleList,
                     visible: true,
                 };
                 footer_component.render(frame, narrow_rect, &mut state, &theme);
@@ -262,9 +261,8 @@ mod tests {
 
     #[test]
     fn test_footer_component_very_narrow_width() {
-        let app = create_test_app();
         let theme = Theme::default();
-        let mut footer_component = FooterComponent::new();
+        let footer_component = FooterComponent::new();
         let mut terminal = Terminal::new(TestBackend::new(10, 10)).unwrap();
 
         // Test with very narrow width (less than 10 characters)
@@ -273,7 +271,7 @@ mod tests {
         terminal
             .draw(|frame| {
                 let mut state = FooterState {
-                    app: &app,
+                    current_context: Context::ArticleList,
                     visible: true,
                 };
                 footer_component.render(frame, very_narrow_rect, &mut state, &theme);

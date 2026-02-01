@@ -95,9 +95,9 @@ pub fn render(app: &mut App, frame: &mut Frame) {
     preview_component.render(frame, main_layout[1], &mut preview_state, &app.theme);
 
     // --- Render Footer ---
-    let mut footer_component = FooterComponent::new();
+    let footer_component = FooterComponent::new();
     let mut footer_state = components::footer::FooterState {
-        app,
+        current_context: app.current_context,
         visible: true,
     };
     footer_component.render(frame, layout[2], &mut footer_state, &app.theme);
