@@ -237,7 +237,6 @@ impl App<'_> {
     /// Get the current article count (filtered or total)
     pub fn get_visible_count(&mut self) -> usize {
         if self.search_state.is_active() {
-            self.update_search_filter();
             self.search_state.filtered_count()
         } else {
             self.query_result.articles.len()
@@ -308,12 +307,14 @@ impl App<'_> {
     /// Handle search character input and sync selection
     pub fn handle_search_char(&mut self, c: char) {
         self.search_state.push_char(c);
+        self.update_search_filter();
         self.sync_selection_to_filter();
     }
 
     /// Handle search backspace and sync selection
     pub fn handle_search_backspace(&mut self) {
         self.search_state.pop_char();
+        self.update_search_filter();
         self.sync_selection_to_filter();
     }
 
