@@ -1,3 +1,4 @@
+use crate::config::Config;
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::symbols::border;
 use ratatui::text::{Line, Span};
@@ -142,9 +143,15 @@ impl Default for Theme {
 
 impl Theme {
     /// Load theme from configuration file
-    pub fn load_from_config() -> Result<Self, Box<dyn std::error::Error>> {
-        // TODO: Implement config file loading
-        Ok(Self::default())
+    pub fn from_config(config: &Config) -> Self {
+        match config.ui.theme_name.as_str() {
+            "light" => Self {
+                // Initialize 'main' directly and pull the rest from Default
+                main: Style::new().fg(Color::Black).bg(Color::White),
+                ..Self::default()
+            },
+            _ => Self::default(), // Default is your "dark" TokyoNight theme
+        }
     }
 
     /// Get border style based on focus state

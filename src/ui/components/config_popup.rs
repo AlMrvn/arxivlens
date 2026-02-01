@@ -123,7 +123,7 @@ impl TestableComponent<'_> for ConfigPopupComponent {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::{PinnedConfig, QueryConfig};
+    use crate::config::{PinnedConfig, QueryConfig, UiConfig};
     use ratatui::backend::TestBackend;
     use ratatui::Terminal;
 
@@ -138,6 +138,9 @@ mod tests {
             },
             storage: crate::config::StorageConfig {
                 database_name: "test.db".to_string(),
+            },
+            ui: UiConfig {
+                theme_name: "light".to_string(),
             },
         }
     }
