@@ -2,7 +2,6 @@ pub mod component;
 pub mod components;
 pub mod footer;
 pub mod highlight;
-pub mod search;
 pub mod style;
 pub mod testing;
 pub mod theme;
@@ -10,7 +9,6 @@ pub mod utils;
 
 // Legacy exports (to maintain compatibility during transition)
 pub use footer::render_footer;
-pub use search::render_search_bar;
 pub use style::Theme as LegacyTheme;
 pub use utils::option_vec_to_option_slice;
 
