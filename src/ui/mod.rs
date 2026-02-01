@@ -13,7 +13,7 @@ pub use utils::option_vec_to_option_slice;
 // New component-based architecture exports
 pub use component::{Component, ComponentLayout, LayoutComponent, TestableComponent};
 pub use components::{
-    ArticleListComponent, ConfigPopupComponent, HelpPopupComponent, PreviewComponent,
+    ArticleListComponent, ConfigPopupComponent, FooterComponent, HelpPopupComponent, PreviewComponent,
     SearchBarComponent,
 };
 pub use testing::GoldenTester;
@@ -95,7 +95,12 @@ pub fn render(app: &mut App, frame: &mut Frame) {
     preview_component.render(frame, main_layout[1], &mut preview_state, &app.theme);
 
     // --- Render Footer ---
-    render_footer(frame, layout[2], app);
+    let mut footer_component = FooterComponent::new();
+    let mut footer_state = components::footer::FooterState {
+        app,
+        visible: true,
+    };
+    footer_component.render(frame, layout[2], &mut footer_state, &app.theme);
 
     // --- Render Overlays (Popups) ---
     render_overlays(app, frame);
