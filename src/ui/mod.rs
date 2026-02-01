@@ -13,8 +13,8 @@ pub use utils::option_vec_to_option_slice;
 // New component-based architecture exports
 pub use component::{Component, ComponentLayout, LayoutComponent, TestableComponent};
 pub use components::{
-    ArticleListComponent, ConfigPopupComponent, FooterComponent, HelpPopupComponent, PreviewComponent,
-    SearchBarComponent,
+    ArticleListComponent, ConfigPopupComponent, FooterComponent, HelpPopupComponent,
+    PreviewComponent, SearchBarComponent,
 };
 pub use testing::GoldenTester;
 pub use theme::Theme;

@@ -1,8 +1,8 @@
 use crate::app::{actions::KEY_MAP, Context};
+use crate::ui::component::TestableComponent;
 use crate::ui::{component::Component, theme::Theme};
 use ratatui::{
     layout::Rect,
-    style::Style,
     text::{Line, Span},
     widgets::{Block, Paragraph},
     Frame,
@@ -15,6 +15,12 @@ pub struct FooterComponent {
 pub struct FooterState {
     pub current_context: Context,
     pub visible: bool,
+}
+
+impl Default for FooterComponent {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl FooterComponent {
@@ -152,6 +158,23 @@ impl Component<'_> for FooterComponent {
 
     fn on_blur(&mut self) {
         self.focused = false;
+    }
+}
+
+impl TestableComponent<'_> for FooterComponent {
+    fn create_test_instance() -> Self {
+        Self::new()
+    }
+
+    fn get_test_state() -> Self::State {
+        FooterState {
+            visible: true,
+            current_context: crate::app::Context::ArticleList,
+        }
+    }
+
+    fn test_name() -> &'static str {
+        "footer"
     }
 }
 

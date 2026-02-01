@@ -1,0 +1,14 @@
+CompletedFrame { buffer: Buffer {
+    area: Rect { x: 0, y: 0, width: 20, height: 6 },
+    content: [
+        "q Quit | ? Help     ",
+        "                    ",
+        "                    ",
+        "                    ",
+        "                    ",
+        "                    ",
+    ],
+    styles: [
+        x: 0, y: 0, fg: Black, bg: Rgb(0, 128, 128), underline: Reset, modifier: NONE,
+    ]
+}, area: Rect { x: 0, y: 0, width: 20, height: 6 }, count: 0 }
