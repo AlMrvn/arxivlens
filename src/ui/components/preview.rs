@@ -62,9 +62,14 @@ impl PreviewComponent {
         theme: &Theme,
     ) -> (Line<'a>, Line<'a>, Line<'a>, Line<'a>) {
         let author_patterns: Vec<&str> = pinned_config.authors.iter().map(|s| s.as_str()).collect();
-        let title = highlight_patterns(&entry.title, None, theme);
-        let authors = highlight_patterns(entry.get_all_authors(), Some(&author_patterns), theme);
-        let summary = highlight_patterns(&entry.summary, None, theme);
+        let title = highlight_patterns(&entry.title, None, theme, theme.main);
+        let authors = highlight_patterns(
+            entry.get_all_authors(),
+            Some(&author_patterns),
+            theme,
+            theme.main,
+        );
+        let summary = highlight_patterns(&entry.summary, None, theme, theme.main);
         let updated = Line::from(entry.updated.clone());
 
         (title, authors, summary, updated)
@@ -144,7 +149,7 @@ impl<'a> Component<'a> for PreviewComponent {
             .borders(Borders::ALL)
             .border_type(BorderType::Rounded)
             .border_style(border_style)
-            .title(theme.format_title(" Article Preview ", self.shortcut, self.focused));
+            .title(theme.format_title(" Article Preview ", self.shortcut, self.focused, None));
 
         // Get the area inside the borders
         let inner_area = block.inner(area);

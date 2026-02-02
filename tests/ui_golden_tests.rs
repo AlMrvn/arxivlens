@@ -2,8 +2,7 @@
 mod golden_tests {
     use arxivlens::golden_test;
     use arxivlens::ui::components::{
-        ArticleListComponent, ConfigPopupComponent, FooterComponent, PreviewComponent,
-        SearchBarComponent,
+        ArticleFeed, ConfigPopupComponent, FooterComponent, PreviewComponent, SearchBarComponent,
     };
     use arxivlens::ui::testing::GoldenTester;
     use std::path::PathBuf;
@@ -19,7 +18,7 @@ mod golden_tests {
     }
 
     golden_test!(SearchBarComponent, test_search_bar_golden);
-    golden_test!(ArticleListComponent, test_article_list_golden);
+    golden_test!(ArticleFeed, test_article_feed_golden);
     golden_test!(ConfigPopupComponent, test_config_popup_golden);
     golden_test!(PreviewComponent, test_preview_golden);
     golden_test!(PreviewComponent, test_preview_responsive, responsive);

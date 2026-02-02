@@ -107,12 +107,12 @@ impl Default for Theme {
             },
 
             list: ListTheme {
-                item: Style::new().fg(TEAL),
+                item: Style::new().fg(TEAL).add_modifier(Modifier::BOLD),
+                authors: Style::new().fg(DARK_GRAY),
                 selected: Style::new().fg(Color::Black).bg(Color::White),
                 selected_focused: Style::new().fg(Color::Black).bg(Color::White),
                 selected_unfocused: Style::new().fg(Color::White).bg(DARK_GRAY),
                 highlighted: Style::new().fg(ORANGE).add_modifier(Modifier::BOLD),
-                authors: Style::new().fg(LIGHT_GRAY),
                 date: Style::new().fg(DARK_GRAY),
                 scrollbar: Style::new().fg(LIGHT_GRAY),
             },
@@ -203,6 +203,7 @@ impl Theme {
         title: &'a str,
         shortcut: Option<usize>,
         focused: bool,
+        count: Option<usize>,
     ) -> Line<'a> {
         let mut spans = Vec::new();
 
@@ -211,10 +212,18 @@ impl Theme {
             spans.push(Span::styled(format!("[{}] ", n), self.shortcut));
         }
 
-        // 2. Add the main title text
-        spans.push(Span::styled(title, self.title));
+        // 2. Add the main title text: "Feed Name"
+        spans.push(Span::styled(title.trim(), self.title));
 
-        // 3. Optional focus indicator
+        // 3. Item Count: Only show if provided (e.g., Some(15))
+        if let Some(c) = count {
+            spans.push(Span::styled(
+                format!(" ({})", c),
+                self.list.authors, // Subtle dimmed style
+            ));
+        }
+
+        // 4. Focus indicator: " (focused)"
         if focused {
             spans.push(Span::styled(" (focused)", self.border.focused));
         }

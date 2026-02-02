@@ -48,7 +48,10 @@ impl Action {
             | Action::PageDown
             | Action::GoToTop
             | Action::GoToBottom
-            | Action::YankId => matches!(context, Context::ArticleList | Context::Pinned),
+            | Action::YankId => matches!(
+                context,
+                Context::ArticleList | Context::Pinned | Context::Search
+            ),
             // ClosePopup is always valid - behavior depends on context
             Action::ClosePopup => true,
             // Search is always valid

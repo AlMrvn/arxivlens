@@ -38,24 +38,30 @@ pub fn search_patterns(text: &str, patterns: &[&str]) -> Vec<(usize, usize)> {
 ///
 /// The lifetime of the output is only due to the lifetime of the text, not of the
 /// patterns.
-pub fn highlight_patterns<'a>(text: &'a str, patterns: Option<&[&str]>, theme: &Theme) -> Line<'a> {
+pub fn highlight_patterns<'a>(
+    text: &'a str,
+    patterns: Option<&[&str]>,
+    theme: &Theme,
+    base_style: ratatui::style::Style,
+) -> Line<'a> {
     let patterns = patterns.unwrap_or_default();
     let match_locs = search_patterns(text, patterns);
 
     if match_locs.is_empty() {
-        Line::from(Span::raw(text).style(theme.main))
+        Line::from(Span::raw(text).style(base_style)) // Use base_style
     } else {
         let mut start_chunk: usize = 0;
         let mut highlighted_spans: Vec<Span> = Vec::new();
         for (start, end) in match_locs.iter() {
-            highlighted_spans.push(Span::raw(&text[start_chunk..*start]).style(theme.main));
-            highlighted_spans.push(Span::raw(&text[*start..*end]).style(theme.highlight));
+            // Use base_style for the non-matched parts
+            highlighted_spans.push(Span::raw(&text[start_chunk..*start]).style(base_style));
+            // Use the specific highlighted style for matches
+            highlighted_spans.push(Span::raw(&text[*start..*end]).style(theme.list.highlighted));
             start_chunk = *end;
         }
 
-        // Adding the last bit if necessary:
         if start_chunk != text.len() {
-            highlighted_spans.push(Span::raw(&text[start_chunk..]).style(theme.main));
+            highlighted_spans.push(Span::raw(&text[start_chunk..]).style(base_style));
         }
         Line::from(highlighted_spans)
     }
@@ -81,15 +87,16 @@ mod tests {
         let theme = Theme::default();
         let text = "This is a text with some keywords like hello and world";
         let patterns = &["hello", "world"];
+        let base_style = theme.main;
 
         let expected_spans = vec![
-            Span::raw("This is a text with some keywords like ").style(theme.main),
-            Span::raw("hello").style(theme.highlight),
-            Span::raw(" and ").style(theme.main),
-            Span::raw("world").style(theme.highlight),
+            Span::raw("This is a text with some keywords like ").style(base_style),
+            Span::raw("hello").style(theme.list.highlighted),
+            Span::raw(" and ").style(base_style),
+            Span::raw("world").style(theme.list.highlighted),
         ];
 
-        let result = highlight_patterns(text, Some(patterns), &theme);
+        let result = highlight_patterns(text, Some(patterns), &theme, base_style);
 
         assert_eq!(result.spans, expected_spans);
     }
@@ -99,10 +106,11 @@ mod tests {
         let theme = Theme::default();
         let text = "This is a text without any keywords";
         let patterns = &["hello", "world"];
+        let base_style = theme.main;
 
-        let expected_spans = vec![Span::raw(text).style(theme.main)];
+        let expected_spans = vec![Span::raw(text).style(base_style)];
 
-        let result = highlight_patterns(text, Some(patterns), &theme);
+        let result = highlight_patterns(text, Some(patterns), &theme, base_style);
 
         assert_eq!(result.spans, expected_spans);
     }
@@ -111,10 +119,11 @@ mod tests {
     fn test_highlight_patterns_none() {
         let theme = Theme::default();
         let text = "This is a text without any keywords";
+        let base_style = theme.main;
 
-        let expected_spans = vec![Span::raw(text).style(theme.main)];
+        let expected_spans = vec![Span::raw(text).style(base_style)];
 
-        let result = highlight_patterns(text, None, &theme);
+        let result = highlight_patterns(text, None, &theme, base_style);
 
         assert_eq!(result.spans, expected_spans);
     }
@@ -124,14 +133,15 @@ mod tests {
         let theme = Theme::default();
         let text = "This is a text with some keywords like hello and world";
         let patterns = &["hello"];
+        let base_style = theme.main;
 
         let expected_spans = vec![
-            Span::raw("This is a text with some keywords like ").style(theme.main),
-            Span::raw("hello").style(theme.highlight),
-            Span::raw(" and world").style(theme.main),
+            Span::raw("This is a text with some keywords like ").style(base_style),
+            Span::raw("hello").style(theme.list.highlighted),
+            Span::raw(" and world").style(base_style),
         ];
 
-        let result = highlight_patterns(text, Some(patterns), &theme);
+        let result = highlight_patterns(text, Some(patterns), &theme, base_style);
 
         assert_eq!(result.spans, expected_spans);
     }

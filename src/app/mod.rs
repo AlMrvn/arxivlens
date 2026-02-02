@@ -1,18 +1,17 @@
 use crate::arxiv::{ArxivEntry, ArxivQueryResult};
 use crate::config::{Config, PinnedConfig};
 use crate::search::engine::SearchEngine;
-use crate::ui::components::article_list::ArticleListComponent;
 use crate::ui::components::config_popup::ConfigPopupComponent;
 use crate::ui::components::help_popup::HelpPopupComponent;
 use crate::ui::components::preview::PreviewComponent;
 use crate::ui::components::search_bar::SearchBarComponent;
-use crate::ui::components::vip_feed::PinnedAuthorsComponent;
 use crate::ui::Component;
 use crate::ui::Theme;
 use arboard::Clipboard;
 use search::SearchState;
 use std::error::Error;
 
+use ratatui::widgets::{ListState, ScrollbarState};
 use ratatui::Frame;
 
 pub mod actions;
@@ -58,18 +57,17 @@ pub struct App<'a> {
     /// Search state
     pub search_state: SearchState,
     /// Current selection state for the article list
-    pub article_list_state: ratatui::widgets::ListState,
+    pub article_list_state: ListState,
+    pub article_scrollbar_state: ScrollbarState,
     /// Search Engine for fuzzy-matching
     pub search_engine: SearchEngine,
 
     // --- Component Fields ---
     pub config_popup: ConfigPopupComponent,
     pub search_bar: SearchBarComponent,
-    pub article_list: ArticleListComponent,
     pub preview: PreviewComponent,
     pub help_popup: HelpPopupComponent,
-    pub vip_feed: PinnedAuthorsComponent,
-    pub vip_feed_state: ratatui::widgets::ListState,
+    pub vip_feed_state: ListState,
     pub selected_pinned_author: Option<String>,
 }
 
@@ -96,12 +94,12 @@ impl<'a> App<'a> {
             search_engine: crate::search::engine::SearchEngine::new(),
             // --- Component Initialization ---
             search_bar: SearchBarComponent::new(),
-            article_list: ArticleListComponent::new(),
             preview: PreviewComponent::new(),
             config_popup: ConfigPopupComponent::new(),
             help_popup: HelpPopupComponent::new(),
-            vip_feed: PinnedAuthorsComponent::new(),
             vip_feed_state: ratatui::widgets::ListState::default(),
+            article_scrollbar_state: ratatui::widgets::ScrollbarState::default(),
+
             selected_pinned_author: None,
         }
     }
@@ -214,20 +212,17 @@ impl App<'_> {
         // 4. Centralized Focus Management
         // Blur everything first
         self.search_bar.on_blur();
-        self.article_list.on_blur();
         self.preview.on_blur();
         self.config_popup.on_blur();
         self.help_popup.on_blur();
-        self.vip_feed.on_blur();
 
         // Focus only the active one
         match self.current_context {
             Context::Search => self.search_bar.on_focus(),
-            Context::ArticleList => self.article_list.on_focus(),
             Context::Preview => self.preview.on_focus(),
             Context::Config => self.config_popup.on_focus(),
             Context::Help => self.help_popup.on_focus(),
-            Context::Pinned => self.vip_feed.on_focus(),
+            _ => {}
         }
     }
 

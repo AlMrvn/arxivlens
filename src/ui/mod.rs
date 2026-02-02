@@ -6,21 +6,22 @@ pub mod testing;
 pub mod theme;
 pub mod utils;
 
-// Legacy exports (to maintain compatibility during transition)
+// Legacy exports
 pub use style::Theme as LegacyTheme;
 pub use utils::option_vec_to_option_slice;
 
 // New component-based architecture exports
 pub use component::{Component, ComponentLayout, LayoutComponent, TestableComponent};
 pub use components::{
-    ArticleListComponent, ConfigPopupComponent, FooterComponent, HelpPopupComponent,
-    PinnedAuthorsComponent, PreviewComponent, SearchBarComponent,
+    ArticleFeed, ConfigPopupComponent, FooterComponent, HelpPopupComponent, PreviewComponent,
+    SearchBarComponent,
 };
 pub use testing::GoldenTester;
 pub use theme::Theme;
 
 use crate::app::{App, Context};
 use crate::arxiv::ArxivEntry;
+use crate::ui::components::article_feed::ArticleFeedState;
 use ratatui::{
     layout::{Constraint, Direction, Layout},
     Frame,
@@ -28,8 +29,9 @@ use ratatui::{
 
 /// Render the app:
 pub fn render(app: &mut App, frame: &mut Frame) {
-    // 1. Layout logic
     let area = frame.size();
+
+    // 1. Root Vertical Layout
     let layout = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
@@ -39,22 +41,19 @@ pub fn render(app: &mut App, frame: &mut Frame) {
         ])
         .split(area);
 
-    // 1. Primary Vertical Split: Left Column (Filter + Articles) | Right Column (Preview)
+    // 2. Main Horizontal Split (Feeds | Preview)
     let primary_layout = Layout::default()
         .direction(Direction::Horizontal)
-        .constraints([
-            Constraint::Percentage(50), // Left column
-            Constraint::Percentage(50), // Right column (full height preview)
-        ])
+        .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
         .split(layout[1]);
 
-    // 2. Determine VIP feed constraint for left column sub-split
-    // 1. Get the data you need (specifically just the authors and entries)
+    // 3. Data Preparation
     let pinned = &app.config.pinned.authors;
-    let entries = &app.query_result.articles;
 
-    // 2. Filter them. This only borrows specific fields, not the whole 'app'
-    let vip_articles: Vec<&ArxivEntry> = entries
+    // Filter VIP articles
+    let vip_articles: Vec<&ArxivEntry> = app
+        .query_result
+        .articles
         .iter()
         .filter(|e| {
             e.authors.iter().any(|author_name| {
@@ -65,110 +64,118 @@ pub fn render(app: &mut App, frame: &mut Frame) {
         })
         .collect();
 
-    // 3. Now you can safely borrow the state mutably
-    let vip_state = components::vip_feed::PinnedAuthorsState {
-        vip_articles: &vip_articles,
-        list_state: &mut app.vip_feed_state, // Rust is happy now!
-        visible: !vip_articles.is_empty(),
-        expanded: app.current_context == Context::Pinned,
-    };
-    let vip_component = PinnedAuthorsComponent::new();
-
-    let vip_constraint_length = vip_component.get_constraint_length(&vip_state);
-
-    // 3. Left Column Sub-split: VIP Feed (top) + Articles (bottom)
-    let left_column_layout = if vip_constraint_length > 0 {
-        Layout::default()
-            .direction(Direction::Vertical)
-            .constraints([
-                Constraint::Length(vip_constraint_length), // VIP feed
-                Constraint::Min(0),                        // Articles list
-            ])
-            .split(primary_layout[0])
+    // Filter Main feed articles
+    let main_articles: Vec<&ArxivEntry> = if app.search_state.is_active() {
+        app.search_state
+            .filtered_indices
+            .iter()
+            .filter_map(|&idx| app.query_result.articles.get(idx))
+            .collect()
     } else {
-        std::rc::Rc::from([primary_layout[0]]) // No VIP feed, articles use full left column
+        app.query_result.articles.iter().collect()
     };
 
-    // 2. Component setup & Focus Management
+    // 4. Determine Layout Heights
+    let is_pinned_focused = app.current_context == Context::Pinned;
+    let vip_height = if vip_articles.is_empty() {
+        0
+    } else if is_pinned_focused {
+        10 // Expanded height when focused
+    } else {
+        4 // Minimal strip height
+    };
+
+    let left_column_layout = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Length(vip_height), Constraint::Min(0)])
+        .split(primary_layout[0]);
+
+    // 5. Component Initialization & Rendering
+
+    // --- Search Bar ---
     let mut search_bar = SearchBarComponent::new();
-    let mut article_list = ArticleListComponent::new();
-    let mut preview_component = PreviewComponent::new();
-    let mut vip_feed_component = PinnedAuthorsComponent::new();
-
-    match app.current_context {
-        Context::Search => {
-            search_bar.on_focus();
-        }
-        Context::ArticleList => {
-            article_list.on_focus();
-        }
-        Context::Preview => {
-            preview_component.on_focus();
-        }
-        Context::Pinned => {
-            vip_feed_component.on_focus();
-        }
-        _ => {}
+    if app.current_context == Context::Search {
+        search_bar.on_focus();
     }
-
-    // 3. Rendering - Using the Component Trait
-
-    // --- Render Search Bar ---
-    let mut search_state = crate::ui::components::search_bar::SearchBarState {
-        query: &app.search_state.query,
-        visible: true,
-    };
-    search_bar.render(frame, layout[0], &mut search_state, &app.theme);
-
-    // --- Render VIP Feed (if visible) ---
-    if vip_constraint_length > 0 {
-        let mut vip_state = components::vip_feed::PinnedAuthorsState {
-            vip_articles: &vip_articles,
-            list_state: &mut app.vip_feed_state,
+    search_bar.render(
+        frame,
+        layout[0],
+        &mut crate::ui::components::search_bar::SearchBarState {
+            query: &app.search_state.query,
             visible: true,
-            expanded: app.current_context == Context::Pinned,
+        },
+        &app.theme,
+    );
+
+    // --- VIP Feed ---
+    if vip_height > 0 {
+        let mut vip_feed = ArticleFeed::new(" VIP Feed ", Some(1));
+        if is_pinned_focused {
+            vip_feed.on_focus();
+        }
+
+        let mut vip_state = ArticleFeedState {
+            articles: vip_articles,
+            list_state: &mut app.vip_feed_state,
+            scrollbar_state: &mut ratatui::widgets::ScrollbarState::default(),
+            search_query: Some(&app.search_state.query),
+            search_engine: Some(&mut app.search_engine),
+            watched_authors: Some(&app.config.pinned.authors),
         };
-        vip_feed_component.render(frame, left_column_layout[0], &mut vip_state, &app.theme);
+        vip_feed.render(frame, left_column_layout[0], &mut vip_state, &app.theme);
     }
 
-    // --- Render Article List ---
-    // We save the selected index first to avoid multiple mutable borrows
-    {
-        let mut article_state = crate::ui::components::article_list::ArticleListState {
-            query_result: app.query_result,
-            list_state: &mut app.article_list_state,
-            search_state: &app.search_state,
-            search_engine: &mut app.search_engine,
-            highlight_authors: Some(app.pinned_config.authors.as_slice()),
-            scrollbar_state: ratatui::widgets::ScrollbarState::default(),
-        };
-        article_list.render(
-            frame,
-            if vip_constraint_length > 0 {
-                left_column_layout[1]
-            } else {
-                left_column_layout[0]
-            },
-            &mut article_state,
-            &app.theme,
-        );
+    // --- Main Article Feed ---
+    let mut main_feed = ArticleFeed::new(" Articles ", Some(2));
+    if app.current_context == Context::ArticleList {
+        main_feed.on_focus();
     }
 
-    // --- Render Article Preview (Right Side) ---
-    let preview_article = app.get_preview_article();
-    let mut preview_state =
-        components::preview::PreviewState::new(preview_article, app.pinned_config);
-    preview_component.render(frame, primary_layout[1], &mut preview_state, &app.theme);
-
-    // --- Render Footer ---
-    let footer_component = FooterComponent::new();
-    let mut footer_state = components::footer::FooterState {
-        current_context: app.current_context,
-        visible: true,
+    let mut main_state = ArticleFeedState {
+        articles: main_articles,
+        list_state: &mut app.article_list_state,
+        scrollbar_state: &mut app.article_scrollbar_state,
+        search_query: Some(&app.search_state.query),
+        search_engine: Some(&mut app.search_engine),
+        watched_authors: Some(&app.config.pinned.authors),
     };
-    footer_component.render(frame, layout[2], &mut footer_state, &app.theme);
+    main_feed.render(
+        frame,
+        if vip_height > 0 {
+            left_column_layout[1]
+        } else {
+            left_column_layout[0]
+        },
+        &mut main_state,
+        &app.theme,
+    );
 
-    // --- Render Overlays (Popups) ---
+    // --- Preview ---
+    let mut preview = PreviewComponent::new();
+    if app.current_context == Context::Preview {
+        preview.on_focus();
+    }
+    preview.render(
+        frame,
+        primary_layout[1],
+        &mut crate::ui::components::preview::PreviewState::new(
+            app.get_preview_article(),
+            app.pinned_config,
+        ),
+        &app.theme,
+    );
+
+    // --- Footer ---
+    FooterComponent::new().render(
+        frame,
+        layout[2],
+        &mut crate::ui::components::footer::FooterState {
+            current_context: app.current_context,
+            visible: true,
+        },
+        &app.theme,
+    );
+
     render_overlays(app, frame);
 }
 
@@ -178,18 +185,25 @@ fn render_overlays(app: &mut App, frame: &mut Frame) {
         Context::Config => {
             let mut config_comp = ConfigPopupComponent::new();
             config_comp.on_focus();
-            let mut config_state = crate::ui::components::config_popup::ConfigPopupState {
-                config: &app.config,
-                visible: true,
-            };
-            config_comp.render(frame, area, &mut config_state, &app.theme);
+            config_comp.render(
+                frame,
+                area,
+                &mut crate::ui::components::config_popup::ConfigPopupState {
+                    config: &app.config,
+                    visible: true,
+                },
+                &app.theme,
+            );
         }
         Context::Help => {
             let mut help_comp = HelpPopupComponent::new();
             help_comp.on_focus();
-            let mut help_state =
-                crate::ui::components::help_popup::HelpPopupState { visible: true };
-            help_comp.render(frame, area, &mut help_state, &app.theme);
+            help_comp.render(
+                frame,
+                area,
+                &mut crate::ui::components::help_popup::HelpPopupState { visible: true },
+                &app.theme,
+            );
         }
         _ => {}
     }
