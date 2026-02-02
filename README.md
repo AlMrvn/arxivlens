@@ -2,19 +2,11 @@
 ArxivLens is a Rust-based terminal user interface (TUI) application that helps you browse and explore new abstracts on the arXiv repository. The name was suggested by the AI assistant, Gemini!
 
 ## Motivation
-This project arose from a desire to create a convenient way to explore the latest arXiv entries in specific categories (like "quant-ph"). The goal was to replicate the experience of browsing submitted manuscripts on the arXiv website, allowing you to scan through abstracts and search for keywords or familiar authors. Additionally, it served as a platform for myself to experiment and learn with the Rust programming language.
+This project arose from a desire to create a convenient way to explore the latest arXiv entries in specific categories (like "quant-ph"). The goal was to replicate the experience of browsing submitted manuscripts on the arXiv website, allowing you to scan through abstracts and search for keywords or familiar authors. Additionally, it served as a platform for myself to experiment and learn with the Rust programming language and LLM coding more recently.
 
 ## Features
 
 ![TUI interface](screenshot.png)
-
-- Browse new abstracts in your chosen category (default: "quant-ph")
-- Search for specific authors in the arXiv database
-- Highlight keywords and authors in abstracts and titles
-- View detailed article information including authors, summary, and publication dates
-- Customizable configuration for default category and highlighting preferences
-- Fast and efficient terminal-based interface
-- Support for all arXiv categories (e.g., quant-ph, cs.AI, math.AG)
 
 ## Installation
 
@@ -49,10 +41,20 @@ Options:
 ```
 
 ### Keyboard Shortcuts
-- `↑` / `↓`: Navigate through article list
-- `Enter`: View detailed article information
-- `q`: Quit the application
-- `Esc`: Return to article list from detail view
+| Key | Action |
+|-----|--------|
+| `j` / `↓` | Move selection down |
+| `k` / `↑` | Move selection up |
+| `Ctrl+d` / `PgDn` | Page down |
+| `Ctrl+u` / `PgUp` | Page up |
+| `g` | Go to top |
+| `G` | Go to bottom |
+| `/` | Open Search |
+| `y` | Yank (copy) Article ID to clipboard |
+| `c` | Toggle Config popup |
+| `?` | Show Help |
+| `Esc` | Close popup or Exit |
+| `q` | Quit |
 
 ### Configuration
 If `$XDG_CONFIG_HOME/arxivlens/config.toml` exists, it will be read and used. If `$XDG_CONFIG_HOME` is not set, `~/.cache/` will be used instead.
@@ -62,15 +64,17 @@ Example config file:
 [query]
 category = "quant-ph"
 
-[highlight]
+[ui]
+theme_name = "dark"
+
+[pinned]
 authors = ["Schrodinger", "Becquerel"]
-keywords = ["quantum", "Error Correction"]
+categories = ["quant-ph", "cs.AI"]
 ```
 
 The configuration supports:
 - Default category for arXiv queries
 - List of authors to highlight in the article list
-- List of keywords to highlight in abstracts and titles
 
 ## Examples
 
@@ -88,47 +92,6 @@ arxivlens -c "cs.AI" -a "Hinton"
 ```bash
 arxivlens -c "math.AG"
 ```
-
-## Project Structure
-The project is organized as follows:
-
-```text
-src/
-├── main.rs           # Application entry point and CLI argument handling
-├── lib.rs            # Library exports and module declarations
-├── app.rs            # Main application state and logic
-├── config.rs         # Configuration management and validation
-├── event.rs          # Event handling system
-├── handler.rs        # Event handlers for user interactions
-├── tui.rs            # Terminal UI setup and rendering
-├── ui.rs             # UI module declarations
-├── search_highlight.rs # Search result highlighting
-├── arxiv.rs          # Arxiv module declarations
-├── ui/               # UI components
-│   ├── list.rs       # Paper list view
-│   ├── detail.rs     # Paper detail view
-│   └── style.rs      # UI styling and themes
-└── arxiv/            # Arxiv API integration
-    ├── query.rs      # Arxiv API query handling
-    └── parsing.rs    # XML response parsing
-```
-
-### Key Components
-
-- **main.rs**: Handles CLI arguments and initializes the application
-- **app.rs**: Manages application state and coordinates between components
-- **config.rs**: Handles configuration loading, validation, and defaults
-- **event.rs**: Defines the event system for handling user input
-- **handler.rs**: Implements event handlers for user interactions
-- **tui.rs**: Sets up the terminal UI and handles rendering
-- **ui/**: Contains UI components for different views
-  - **list.rs**: Displays the list of papers
-  - **detail.rs**: Shows detailed paper information
-  - **style.rs**: Defines UI styling and themes
-- **arxiv/**: Manages Arxiv API integration
-  - **query.rs**: Handles API queries and responses
-  - **parsing.rs**: Parses XML responses into Rust structs
-
 ## UI Testing & Golden Files
 
 This project uses Golden File testing (snapshot testing) for UI components to prevent layout regressions. Golden files capture the expected terminal output for each component and are compared against actual output during tests.
