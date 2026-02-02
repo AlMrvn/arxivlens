@@ -1,7 +1,7 @@
 CompletedFrame { buffer: Buffer {
     area: Rect { x: 0, y: 0, width: 80, height: 24 },
     content: [
-        "╭[3]  Article Preview ─────────────────────────────────────────────────────────╮",
+        "╭[3] Article Preview───────────────────────────────────────────────────────────╮",
         "│                                                                              │",
         "│  Title ───────────────────────────────────────────────────────────────────── │",
         "│   No results found                                                           │",
@@ -29,7 +29,7 @@ CompletedFrame { buffer: Buffer {
     styles: [
         x: 0, y: 0, fg: Rgb(128, 128, 128), bg: Reset, underline: Reset, modifier: NONE,
         x: 1, y: 0, fg: Rgb(255, 165, 0), bg: Reset, underline: Reset, modifier: BOLD,
-        x: 22, y: 0, fg: Rgb(128, 128, 128), bg: Reset, underline: Reset, modifier: NONE,
+        x: 20, y: 0, fg: Rgb(128, 128, 128), bg: Reset, underline: Reset, modifier: NONE,
         x: 1, y: 1, fg: Reset, bg: Reset, underline: Reset, modifier: NONE,
         x: 79, y: 1, fg: Rgb(128, 128, 128), bg: Reset, underline: Reset, modifier: NONE,
         x: 1, y: 2, fg: Reset, bg: Reset, underline: Reset, modifier: NONE,

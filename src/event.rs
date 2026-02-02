@@ -17,14 +17,15 @@ pub enum Event {
 }
 
 /// Terminal event handler.
-#[allow(dead_code)]
+///
+/// This struct manages a background thread that polls for crossterm events
+/// and sends them through a channel to the main loop.
 #[derive(Debug)]
 pub struct EventHandler {
-    /// Event sender channel.
-    sender: mpsc::Sender<Event>,
     /// Event receiver channel.
     receiver: mpsc::Receiver<Event>,
-    /// Event handler thread.
+    /// Event handler thread handle.
+    #[allow(dead_code)]
     handler: thread::JoinHandle<()>,
 }
 
@@ -36,12 +37,14 @@ impl Default for EventHandler {
 
 impl EventHandler {
     /// Constructs a new instance of [`EventHandler`].
+    ///
+    /// Spawns a background thread to poll terminal events.
     pub fn new() -> Self {
         let (sender, receiver) = mpsc::channel();
-        let handler = {
-            let sender = sender.clone();
-            thread::spawn(move || loop {
-                match event::read().expect("unable to read event") {
+        let handler = thread::spawn(move || {
+            // This blocks the thread until an event occurs, looping as long as read() is Ok
+            while let Ok(crossterm_event) = event::read() {
+                let result = match crossterm_event {
                     CrosstermEvent::Key(e) => {
                         if e.kind == KeyEventKind::Press {
                             sender.send(Event::Key(e))
@@ -51,24 +54,24 @@ impl EventHandler {
                     }
                     CrosstermEvent::Mouse(e) => sender.send(Event::Mouse(e)),
                     CrosstermEvent::Resize(w, h) => sender.send(Event::Resize(w, h)),
-                    CrosstermEvent::FocusGained => Ok(()),
-                    CrosstermEvent::FocusLost => Ok(()),
-                    CrosstermEvent::Paste(_) => unimplemented!(),
+                    CrosstermEvent::FocusGained
+                    | CrosstermEvent::FocusLost
+                    | CrosstermEvent::Paste(_) => Ok(()),
+                };
+
+                // If the receiver was dropped (app closing), break the loop
+                if result.is_err() {
+                    break;
                 }
-                .expect("failed to send terminal event")
-            })
-        };
-        Self {
-            sender,
-            receiver,
-            handler,
-        }
+            }
+        });
+
+        Self { receiver, handler }
     }
 
     /// Receive the next event from the handler thread.
     ///
-    /// This function will always block the current thread if
-    /// there is no data available and it's possible for more data to be sent.
+    /// This function blocks the current thread until an event is available.
     pub fn next(&self) -> AppResult<Event> {
         Ok(self.receiver.recv()?)
     }

@@ -16,7 +16,27 @@ pub fn handle_key_events(
     app: &mut App,
     terminal_height: u16,
 ) -> AppResult<()> {
-    // 1. Modal Logic: If we are typing a search, handle characters directly
+    // 1. Try to map the key to a global action FIRST
+    // This allows Up, Down, PageUp, etc., to be caught before Search modal logic
+    if let Some(action) = map_key_to_action(key_event) {
+        if action.is_valid_in(&app.current_context) {
+            // If it's a navigation action, do it and stop.
+            // (Make sure MoveUp/MoveDown are valid in Context::Search in action.rs!)
+            match action {
+                Action::MoveUp
+                | Action::MoveDown
+                | Action::PageUp
+                | Action::PageDown
+                | Action::GoToTop
+                | Action::GoToBottom => {
+                    app.perform_action(action, terminal_height);
+                    return Ok(());
+                }
+                _ => {} // Continue to modal logic for other actions (like Quit)
+            }
+        }
+    }
+    // 2. Modal Logic: Handle typing if we are in Search context
     if matches!(app.current_context, crate::app::Context::Search) {
         match key_event.code {
             KeyCode::Char(c) => {
@@ -31,22 +51,20 @@ pub fn handle_key_events(
                 app.set_context(crate::app::Context::ArticleList);
                 return Ok(());
             }
-            _ => {} // Ignore other keys while searching
+            _ => {}
         }
     }
-
-    // 2. Global Navigation: LazyGit-style shortcuts
-    // This intercepts digits 1-9 to switch contexts globally
+    // 3. Global Navigation (Digit Shortcuts)
     if let KeyCode::Char(c) = key_event.code {
         if c.is_ascii_digit() && c != '0' {
             let digit = c.to_digit(10).unwrap() as usize;
             if app.navigate_to_shortcut(digit) {
-                return Ok(()); // Shortcut handled, stop processing
+                return Ok(());
             }
         }
     }
 
-    // 2. Action Logic: For everything else, use the KEY_MAP
+    // 4. Default Action Logic (for everything else like 'q' to quit)
     if let Some(action) = map_key_to_action(key_event) {
         if action.is_valid_in(&app.current_context) {
             app.perform_action(action, terminal_height);
