@@ -35,12 +35,32 @@ pub struct Config {
     pub pinned: PinnedConfig,
     #[serde(default)]
     pub storage: StorageConfig,
+    #[serde(default)]
+    pub ui: UiConfig,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+pub struct UiConfig {
+    #[serde(default = "ui_default_theme")]
+    pub theme_name: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 pub struct QueryConfig {
     #[serde(default = "query_default_category")]
     pub category: String,
+}
+
+fn ui_default_theme() -> String {
+    "dark".to_string()
+}
+
+impl Default for UiConfig {
+    fn default() -> Self {
+        Self {
+            theme_name: ui_default_theme(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Default)]
