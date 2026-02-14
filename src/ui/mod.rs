@@ -87,7 +87,7 @@ pub fn render(app: &mut App, frame: &mut Frame) {
 
     let left_column_layout = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([Constraint::Length(vip_height), Constraint::Min(0)])
+        .constraints([Constraint::Length(vip_height), Constraint::Fill(1)])
         .split(primary_layout[0]);
 
     // 5. Component Initialization & Rendering
@@ -139,16 +139,7 @@ pub fn render(app: &mut App, frame: &mut Frame) {
         search_engine: Some(&mut app.search_engine),
         watched_authors: Some(&app.config.pinned.authors),
     };
-    main_feed.render(
-        frame,
-        if vip_height > 0 {
-            left_column_layout[1]
-        } else {
-            left_column_layout[0]
-        },
-        &mut main_state,
-        &app.theme,
-    );
+    main_feed.render(frame, left_column_layout[1], &mut main_state, &app.theme);
 
     // --- Preview ---
     let mut preview = PreviewComponent::new();

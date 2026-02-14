@@ -49,6 +49,7 @@ fn main() -> AppResult<()> {
 
     // Create an application.
     let mut app = App::new(&query_result, &pinned_config, theme, config);
+    app.update_search_filter();
 
     // Initialize the terminal user interface.
     let backend = CrosstermBackend::new(io::stderr());
