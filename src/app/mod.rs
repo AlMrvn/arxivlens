@@ -315,33 +315,6 @@ impl App<'_> {
         self.set_context(next_context);
     }
 
-    /// Get VIP articles (papers by pinned authors)
-    pub fn get_vip_articles(&self) -> Vec<&ArxivEntry> {
-        let base_articles: Vec<&ArxivEntry> = if self.search_state.is_active() {
-            self.search_state
-                .filtered_indices
-                .iter()
-                .filter_map(|&index| self.query_result.articles.get(index))
-                .collect()
-        } else {
-            self.query_result.articles.iter().collect()
-        };
-
-        // Filter to only articles by pinned authors
-        base_articles
-            .into_iter()
-            .filter(|article| {
-                self.config.pinned.authors.iter().any(|pinned_author| {
-                    article.authors.iter().any(|author| {
-                        author
-                            .to_lowercase()
-                            .contains(&pinned_author.to_lowercase())
-                    })
-                })
-            })
-            .collect()
-    }
-
     /// Get the currently visible articles (all articles, not filtered by pinned authors)
     pub fn get_visible_articles(&self) -> Vec<&ArxivEntry> {
         if self.search_state.is_active() {
@@ -353,6 +326,25 @@ impl App<'_> {
         } else {
             self.query_result.articles.iter().collect()
         }
+    }
+
+    /// Get VIP articles (papers by pinned authors)
+    pub fn get_vip_articles(&self) -> Vec<&ArxivEntry> {
+        let visible_articles = self.get_visible_articles();
+
+        // Filter to only articles by pinned authors
+        visible_articles
+            .into_iter()
+            .filter(|article| {
+                self.config.pinned.authors.iter().any(|pinned_author| {
+                    article.authors.iter().any(|author| {
+                        author
+                            .to_lowercase()
+                            .contains(&pinned_author.to_lowercase())
+                    })
+                })
+            })
+            .collect()
     }
 
     pub fn update_selected_pinned_author(&mut self) {
