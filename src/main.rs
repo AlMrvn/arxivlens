@@ -1,5 +1,5 @@
 use arxivlens::app::{App, AppResult};
-use arxivlens::arxiv::{get_query_url, ArxivQueryResult, SearchQuery, SortBy, SortOrder};
+use arxivlens::arxiv::{query_arxiv, ArxivQueryResult, SearchQuery, SortBy, SortOrder};
 use arxivlens::config;
 use arxivlens::event::{Event, EventHandler};
 use arxivlens::handler::handle_key_events;
@@ -113,15 +113,21 @@ fn resolve_query(args: &Args, config: &config::Config) -> AppResult<ArxivQueryRe
 
     queries.push(SearchQuery::Category(category));
 
-    let url = get_query_url(
+    // Fetch XML
+    let xml_body = query_arxiv(
         Some(&queries),
         Some(DEFAULT_START_INDEX),
         Some(DEFAULT_MAX_RESULTS),
         Some(DEFAULT_SORT_BY),
         Some(DEFAULT_SORT_ORDER),
-    );
+    )
+    .map_err(|e| format!("Failed to query arXiv: {e}"))?;
 
-    ArxivQueryResult::from_query(url).map_err(|e| format!("Failed to query arXiv: {e}").into())
+    // Parse the Result
+    let result =
+        ArxivQueryResult::from_xml_content(&xml_body).map_err(|e| format!("Parsing Error: {e}"))?;
+
+    Ok(result)
 }
 
 /// Sets up a custom panic hook to ensure the terminal is restored to a usable state if the app crashes.

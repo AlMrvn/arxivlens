@@ -23,7 +23,7 @@ use std::collections::BTreeMap;
 use std::fmt::Display;
 use thiserror::Error;
 
-const ARXIV_QUERY_BASE_URL: &str = "http://export.arxiv.org/api/query?";
+const ARXIV_QUERY_BASE_URL: &str = "https://export.arxiv.org/api/query?";
 
 // --- Construct the search query ---
 
@@ -267,7 +267,22 @@ pub fn query_arxiv(
         sort_by,
         sort_order,
     );
-    Ok(reqwest::blocking::get(query_str)?.text()?)
+    let ua = format!(
+        "arxivlens/{} (+https://github.com/AlMrvn/arxivlens)",
+        env!("CARGO_PKG_VERSION")
+    );
+    let client = reqwest::blocking::Client::builder()
+        .user_agent(ua)
+        .build()
+        .map_err(ArxivQueryError::NetworkError)?;
+    let response = client
+        .get(query_str)
+        .send()
+        .map_err(ArxivQueryError::NetworkError)?;
+
+    let text = response.text()?;
+
+    Ok(text)
 }
 
 #[cfg(test)]

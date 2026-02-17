@@ -151,11 +151,6 @@ impl ArxivQueryResult {
             articles,
         })
     }
-    pub fn from_query(query: String) -> Result<Self, ArxivParsingError> {
-        let query_response = reqwest::blocking::get(query)?;
-        let xml_content = query_response.text()?;
-        Self::from_xml_content(&xml_content)
-    }
 }
 
 #[cfg(test)]
