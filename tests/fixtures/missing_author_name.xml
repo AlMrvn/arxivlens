@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <updated>2024-07-09T20:00:00Z</updated>
+  <entry>
+    <title>Entry With Missing Author Name</title>
+    <id>http://arxiv.org/abs/9876.54321</id>
+    <summary>This entry has an author element without a name.</summary>
+    <updated>2024-01-01T00:00:00Z</updated>
+    <published>2024-01-01T00:00:00Z</published>
+    <author />
+  </entry>
+</feed>
