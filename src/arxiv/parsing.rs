@@ -65,7 +65,12 @@ fn extract_authors(entry: &Element) -> Result<Vec<String>, ArxivParsingError> {
     // Since there are several child with the same name, we iterate over all of them:
     for child in entry.children() {
         if child.is("author", ENTRY_NS) {
-            let name = child.get_child("name", ENTRY_NS).unwrap().text();
+            let name = child
+                .get_child("name", ENTRY_NS)
+                .ok_or_else(|| ArxivParsingError::MissingField {
+                    field: "author.name".to_string(),
+                })?
+                .text();
             names.push(name)
         }
     }
@@ -195,6 +200,18 @@ mod tests {
         let extracted_authors = extract_authors(&author_element)?;
         assert!(extracted_authors.is_empty());
         Ok(())
+    }
+
+    #[test]
+    fn test_missing_author_name() {
+        let xml_content = load_fixture("missing_author_name.xml");
+
+        let result = ArxivQueryResult::from_xml_content(&xml_content);
+
+        assert!(matches!(
+            result,
+            Err(ArxivParsingError::MissingField { ref field }) if field == "author.name"
+        ));
     }
 
     #[test]
